@@ -15,7 +15,7 @@
 
 ## Instalación rápida
 1. Instala [Obsidian](https://obsidian.md) (gratis).
-2. Descarga este repositorio y copia la carpeta `vault` donde quieras (por ejemplo, `Documentos/ÓRBITA`).
+2. Descarga orbita-publica-v0.1.zip (arriba en la lista de archivos o en Releases), descomprímelo y copia la carpeta vault donde quieras (por ejemplo, Documentos/ÓRBITA).
 3. En Obsidian: «Abrir carpeta como bóveda» y elige esa carpeta.
 4. Ajustes → Plugins de la comunidad → activa los plugins de la comunidad y enciende **ÓRBITA**.
 5. Ajustes → ÓRBITA → escribe **tu nombre**.
