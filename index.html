@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="ÓRBITA: sistema personal para Obsidian con un equipo de seis agentes de IA.">
+<link rel="icon" href="logo.jpg">
+<meta property="og:title" content="ÓRBITA"><meta property="og:image" content="logo.jpg">
+<title>ÓRBITA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: página de producto a sangre, secciones a pantalla con un único foco cada una; fondo espacio, texto casi blanco, acento violeta→cian solo en titulares clave. */
+:root{
+  --bg:#000; --bg2:#0b0a12; --card:#111019; --line:#24222f;
+  --fg:#f5f5f7; --mut:#9a98a6; --dim:#5e5c6a;
+  --vio:#a78bfa; --vio2:#7c5cff; --cyan:#67e8f9;
+  --disp:-apple-system,"SF Pro Display","Inter Tight",system-ui,sans-serif;
+  --text:-apple-system,"SF Pro Text","Inter",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--fg);font:17px/1.5 var(--text);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:rgba(0,0,0,.72)}
+a{color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding-left:max(22px,env(safe-area-inset-left,0px));padding-right:max(22px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--disp);letter-spacing:-.025em;margin:0;text-wrap:balance}
+.grad{background:linear-gradient(100deg,#fff 0%,var(--vio) 45%,var(--cyan) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.eyebrow{font:600 14px/1 var(--text);letter-spacing:.06em;text-transform:uppercase;color:var(--vio)}
+.lead{font-size:clamp(19px,2.3vw,24px);line-height:1.38;color:var(--mut);max-width:640px;font-weight:500}
+.lead b{color:var(--fg);font-weight:600}
+
+/* Nav */
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:rgba(0,0,0,.72);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(255,255,255,.08)}
+nav .wrap{display:flex;align-items:center;gap:24px;height:52px}
+nav .brand{display:flex;align-items:center;gap:9px;font:700 17px var(--disp);letter-spacing:-.01em;text-decoration:none}
+nav .brand img{width:26px;height:26px;border-radius:7px;transform:scale(1.25)}
+nav .links{display:flex;gap:22px;margin-left:auto;font-size:13px;color:var(--mut)}
+nav .links a{text-decoration:none;transition:color .2s}nav .links a:hover{color:var(--fg)}
+.pill{display:inline-flex;align-items:center;gap:6px;background:var(--fg);color:#000;border-radius:980px;padding:7px 15px;font:600 13px var(--text);text-decoration:none;transition:transform .2s,background .2s}
+.pill:hover{background:#fff;transform:scale(1.03)}
+.pill.ghost{background:transparent;color:var(--vio);padding:0;font-size:inherit}
+.pill.ghost:hover{transform:none;text-decoration:underline}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:980px;padding:14px 26px;font:600 17px var(--text);text-decoration:none;transition:transform .25s,box-shadow .25s,background .25s}
+.btn.pri{background:linear-gradient(135deg,var(--vio2),#5b8cff 70%,#2bc4e6);color:#fff;box-shadow:0 10px 40px -10px rgba(124,92,255,.7)}
+.btn.pri:hover{transform:translateY(-2px);box-shadow:0 18px 50px -12px rgba(124,92,255,.85)}
+.btn.sec{color:var(--fg);border:1px solid #3a3848}
+.btn.sec:hover{background:#15141d}
+a:focus-visible,.btn:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+
+/* Hero */
+.hero{position:relative;text-align:center;padding-block:64px 48px;overflow:hidden;background:#000}
+#bh{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero::after{content:"";position:absolute;inset:auto 0 0;height:140px;background:linear-gradient(transparent,#000);pointer-events:none}
+.void{height:clamp(300px,52vw,560px)}
+.hero .wrap{z-index:1}
+.hero .wrap{position:relative}
+.hero h1{font-size:clamp(64px,13vw,168px);font-weight:800;line-height:1.02;letter-spacing:-.045em;padding-top:.08em}
+.hero .tag{font:600 clamp(26px,4vw,44px)/1.1 var(--disp);letter-spacing:-.02em;margin-top:14px}
+.hero p.lead{margin:20px auto 0}
+.cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:32px}
+.planet{position:relative;width:min(620px,92vw);aspect-ratio:1;margin:28px auto 0;max-width:100%}
+.planet img{width:100%;height:100%;object-fit:cover;-webkit-mask-image:radial-gradient(circle at 50% 50%,#000 46%,transparent 70%);mask-image:radial-gradient(circle at 50% 50%,#000 46%,transparent 70%);animation:float 9s ease-in-out infinite;will-change:transform}
+.planet::after{content:"";position:absolute;inset:18%;border-radius:50%;background:radial-gradient(circle,rgba(124,92,255,.35),transparent 65%);filter:blur(40px);z-index:-1}
+@keyframes float{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-14px) rotate(1.5deg)}}
+.specs{display:flex;justify-content:center;gap:clamp(22px,6vw,72px);flex-wrap:wrap;margin-top:8px}
+.specs div{text-align:center}
+.specs b{display:block;font:700 clamp(34px,5vw,52px)/1 var(--disp);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.specs span{font-size:14px;color:var(--mut)}
+
+section{padding-block:clamp(90px,13vw,160px)}
+.center{text-align:center}.center .lead{margin-inline:auto}
+.big{font-size:clamp(44px,7.4vw,92px);line-height:1;font-weight:700}
+.mid{font-size:clamp(34px,5vw,60px);line-height:1.05;font-weight:700}
+
+/* Reveal: todo visible en reposo; JS añade .pre solo si puede animarlo y lo quita al entrar en pantalla */
+@media (prefers-reduced-motion:no-preference){
+  .rv.pre{opacity:0;transform:translateY(40px) scale(.985)}
+  .rv{transition:opacity .9s cubic-bezier(.2,.8,.2,1),transform .9s cubic-bezier(.2,.8,.2,1)}
+}
+@media (prefers-reduced-motion:reduce){.planet img{animation:none}*{scroll-behavior:auto}}
+
+/* Equipo */
+.team{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:56px}
+.agent{position:relative;background:linear-gradient(180deg,#14121e,#0c0b12);border:1px solid var(--line);border-radius:28px;padding:30px 26px 28px;overflow:hidden;transition:transform .4s cubic-bezier(.2,.8,.2,1),border-color .3s;min-width:0}
+.agent:hover{transform:translateY(-6px);border-color:#3b3557}
+.agent .ic{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-size:26px;background:var(--c,#2a2342);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+.agent h3{font-size:24px;margin-top:22px}
+.agent .role{color:var(--vio);font-size:14px;font-weight:600;margin-top:4px}
+.agent p{color:var(--mut);font-size:15.5px;margin:12px 0 0}
+.agent .q{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);font:500 14px/1.45 var(--text);color:#c9c6d6;font-style:italic}
+
+/* Un día */
+.day{display:grid;grid-template-columns:1fr 1.15fr;gap:56px;align-items:start;margin-top:56px}
+.clock{position:sticky;top:calc(env(safe-area-inset-top,0px) + 110px);text-align:left}
+.clock .t{font:700 clamp(72px,11vw,132px)/1 var(--disp);letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.clock .who{margin-top:14px;font:600 22px var(--disp);color:var(--vio)}
+.clock .what{color:var(--mut);margin-top:6px;max-width:340px}
+.timeline{display:flex;flex-direction:column;gap:14px;min-width:0}
+.ping{display:grid;grid-template-columns:64px 1fr;gap:16px;align-items:start;padding:20px 22px;border-radius:22px;border:1px solid var(--line);background:#0c0b12;transition:all .45s cubic-bezier(.2,.8,.2,1);opacity:.5}
+.ping.on{opacity:1;background:linear-gradient(135deg,#1a1530,#0f1a24);border-color:#4b3f86;transform:scale(1.015)}
+.ping time{font:600 15px var(--mono);color:var(--cyan);padding-top:2px;font-variant-numeric:tabular-nums}
+.ping b{display:block;font-size:16px}
+.ping span{color:var(--mut);font-size:15px}
+
+/* Chat */
+.chatwrap{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.device{position:relative;border-radius:40px;padding:12px;background:linear-gradient(145deg,#2b2a33,#0f0e14);box-shadow:0 40px 100px -30px rgba(124,92,255,.45),inset 0 0 0 1px rgba(255,255,255,.08);max-width:420px;width:100%;margin-inline:auto}
+.screen{border-radius:30px;background:#0b0a10;overflow:hidden;height:520px;display:flex;flex-direction:column}
+.screen .hd{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid #1d1b27;font-weight:600;font-size:15px}
+.screen .hd .av{width:34px;height:34px;border-radius:50%;background:#2a2342;display:grid;place-items:center}
+.screen .hd small{display:block;color:#5fd39a;font-weight:500;font-size:12px}
+.msgs{flex:1;padding:18px;display:flex;flex-direction:column;gap:10px;overflow:hidden;justify-content:flex-end}
+.b{max-width:82%;padding:10px 14px;border-radius:20px;font-size:14.5px;line-height:1.4;animation:pop .45s cubic-bezier(.2,.9,.3,1.3) both}
+.b.me{align-self:flex-end;background:linear-gradient(135deg,var(--vio2),#5b8cff);border-bottom-right-radius:6px}
+.b.ag{align-self:flex-start;background:#1c1a27;border-bottom-left-radius:6px}
+.b.ag i{display:block;font-style:normal;font-size:11.5px;color:var(--vio);font-weight:600;margin-bottom:2px}
+.typing{align-self:flex-start;background:#1c1a27;border-radius:20px;padding:12px 14px;display:flex;gap:4px}
+.typing span{width:7px;height:7px;border-radius:50%;background:#8e8a9f;animation:dot 1s infinite}
+.typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
+@keyframes dot{0%,60%,100%{opacity:.3;transform:none}30%{opacity:1;transform:translateY(-3px)}}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+.points{display:flex;flex-direction:column;gap:22px;margin-top:30px}
+.points div{border-left:2px solid #2c2840;padding-left:18px}
+.points b{display:block;font-size:17px}.points span{color:var(--mut);font-size:15.5px}
+
+/* Metas */
+.goals{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:52px}
+.goal{background:#0d0c14;border:1px solid var(--line);border-radius:24px;padding:24px;min-width:0}
+.goal .k{font:600 12px var(--mono);color:var(--dim);letter-spacing:.06em}
+.goal b{display:block;font:600 19px/1.25 var(--disp);margin-top:10px}
+.bar{height:6px;border-radius:6px;background:#1d1b27;margin-top:22px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--vio2),var(--cyan));width:var(--w);transform-origin:left}
+.bar i{transition:transform 1.4s cubic-bezier(.2,.8,.2,1) .2s}.goal.pre .bar i{transform:scaleX(0)}
+.weeks{display:flex;gap:6px;margin-top:14px}
+.weeks span{flex:1;height:26px;border-radius:8px;background:#16141f;display:grid;place-items:center;font:600 11px var(--mono);color:var(--dim)}
+.weeks span.ok{background:#1b2c2a;color:#5fd3b5}
+
+/* Base */
+.base{position:relative;border-radius:36px;overflow:hidden;border:1px solid var(--line);background:radial-gradient(120% 90% at 80% 0%,#241a52 0%,#0c0a16 55%,#07060b 100%);padding:clamp(36px,6vw,72px)}
+.base .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:44px}
+.base .cols div{min-width:0}
+.base .n{font:700 clamp(44px,6vw,64px)/1 var(--disp);letter-spacing:-.03em}
+.base .cols b{display:block;margin-top:10px;font-size:18px}
+.base .cols span{color:var(--mut);font-size:15.5px}
+.quote{font:600 clamp(28px,4.4vw,52px)/1.1 var(--disp);letter-spacing:-.025em;margin-top:56px;max-width:820px}
+
+/* Obsidian / privacidad */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:52px}
+.tile{border-radius:32px;border:1px solid var(--line);background:#0c0b12;padding:clamp(28px,4vw,44px);min-width:0;overflow:hidden}
+.tile h3{font-size:clamp(26px,3vw,34px);line-height:1.1}
+.tile p{color:var(--mut);margin:12px 0 0}
+.files{margin-top:26px;font:500 14px/1.9 var(--mono);color:#b9b5cc;background:#08070d;border:1px solid #1d1b27;border-radius:16px;padding:16px 18px;overflow-x:auto;white-space:pre}
+.files em{font-style:normal;color:var(--dim)}
+.sync{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:30px}
+.dev{width:86px;height:62px;border-radius:12px;border:2px solid #34314a;display:grid;place-items:center;font:600 12px var(--text);color:var(--mut)}
+.dev.ph{width:40px;height:72px;border-radius:12px}
+.flow{position:relative;width:110px;height:2px;background:#24212f;overflow:hidden;border-radius:2px}
+.flow::after{content:"";position:absolute;inset:0;width:40%;background:linear-gradient(90deg,transparent,var(--cyan),transparent);animation:flow 1.8s linear infinite}
+@keyframes flow{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
+
+/* Final */
+.final{text-align:center;padding-block:clamp(100px,14vw,170px) 80px}
+.final img{width:min(260px,60vw);height:auto;aspect-ratio:1;filter:drop-shadow(0 0 60px rgba(124,92,255,.35))}
+footer{border-top:1px solid #1a1922;color:var(--dim);font-size:12.5px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-block:22px 34px}
+
+@media (max-width:900px){
+  .team{grid-template-columns:1fr 1fr}
+  .goals{grid-template-columns:1fr 1fr}
+  .day,.chatwrap,.duo{grid-template-columns:1fr}
+  .clock{position:relative;top:0}
+  .base .cols{grid-template-columns:1fr}
+  nav .links{display:none}
+  nav .pill{margin-left:auto}
+}
+@media (max-width:560px){
+  .team,.goals{grid-template-columns:1fr}
+  .screen{height:460px}
+}
+</style>
+</head>
+<body>
+
+
+<nav aria-label="Principal"><div class="wrap">
+  <a class="brand" href="#top"><img src="logo.jpg" alt="">ÓRBITA</a>
+  <div class="links"><a href="#equipo">Equipo</a><a href="#dia">Un día</a><a href="#chat">Chat</a><a href="#metas">Metas</a><a href="#base">Método</a><a href="#obsidian">Obsidian</a></div>
+  <a class="pill" href="https://github.com/Fatalyy/ORBITA/releases/latest" target="_blank" rel="noopener">Descargar</a>
+</div></nav>
+
+<header class="hero" id="top">
+  <canvas id="bh" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <h1 class="grad">ÓRBITA</h1>
+    <div class="tag">Tu vida, en órbita.</div>
+    <p class="lead">Un sistema personal para <b>Obsidian</b> con un equipo de seis agentes de IA que planifica tu día, sigue tus metas y te pregunta si has hecho lo que dijiste.</p>
+    <div class="cta">
+      <a class="btn pri" href="https://github.com/Fatalyy/ORBITA/releases/latest" target="_blank" rel="noopener">Descargar gratis</a>
+      <a class="btn sec" href="#equipo">Ver cómo funciona</a>
+    </div>
+    <div class="void" role="img" aria-label="Agujero negro con su disco de luz girando"></div>
+    <div class="specs" aria-label="ÓRBITA en cifras">
+      <div><b>6</b><span>agentes de IA</span></div>
+      <div><b>9</b><span>avisos al día</span></div>
+      <div><b>27</b><span>módulos Fénix</span></div>
+      <div><b>0&nbsp;€</b><span>código abierto</span></div>
+    </div>
+  </div>
+</header>
+
+<section id="equipo"><div class="wrap center">
+  <div class="eyebrow rv">El equipo</div>
+  <h2 class="big rv" style="margin-top:14px">Seis especialistas.<br><span class="grad">Un solo objetivo: tú.</span></h2>
+  <p class="lead rv" style="margin-top:22px">Cada agente se ocupa de una parte de tu vida. Hablan como amigos: claros cuando fallas, y los primeros en celebrarlo cuando cumples.</p>
+  <div class="team" style="text-align:left">
+    <article class="agent rv" style="--c:#2a2350"><div class="ic">🧭</div><h3>Director</h3><div class="role">Coordina y cierra el día</div><p>Lee tu nota diaria, reparte el trabajo y cada noche deja listo el plan de mañana.</p><div class="q">«Mañana: entreno a las 13:30 y bloque de dinero por la tarde. Sin excusas.»</div></article>
+    <article class="agent rv" style="--c:#3a2152"><div class="ic">🎯</div><h3>Mentor</h3><div class="role">Metas y disciplina</div><p>Método Brian Tracy, Seminario Fénix y «Si lo crees, lo creas». Te pregunta por tu rana del día.</p><div class="q">«Cómete la rana primero. ¿Cuál es la tuya hoy?»</div></article>
+    <article class="agent rv" style="--c:#1f3340"><div class="ic">💶</div><h3>Estratega</h3><div class="role">Dinero y carrera</div><p>Ingresos, ahorro y pasos concretos para tu carrera, medidos semana a semana.</p><div class="q">«Esta semana: lista de servicios y precios terminada.»</div></article>
+    <article class="agent rv" style="--c:#40261f"><div class="ic">🏋️</div><h3>Entrenador</h3><div class="role">Cuerpo</div><p>Sabe qué días toca gimnasio y cuáles no. Exigente, como un buen entrenador.</p><div class="q">«Hoy es sábado: descanso activo. El lunes, piernas.»</div></article>
+    <article class="agent rv" style="--c:#21352c"><div class="ic">🧴</div><h3>Skincare</h3><div class="role">Rutina de piel</div><p>Rutina de mañana y de noche, con su aviso a la hora justa. Crema solar incluida.</p><div class="q">«¿Te has puesto la crema solar? Son las 12:00.»</div></article>
+    <article class="agent rv" style="--c:#3b2338"><div class="ic">🫶</div><h3>Coach</h3><div class="role">Mente y emociones</div><p>El único que nunca te echa la bronca. Escucha, acompaña y sabe cuándo bajar el ritmo.</p><div class="q">«Hoy ha sido un día duro. Lo importante es que sigues aquí.»</div></article>
+  </div>
+</div></section>
+
+<section id="dia" style="background:linear-gradient(180deg,#000,#07060c 30%,#07060c 70%,#000)"><div class="wrap">
+  <div class="center"><div class="eyebrow rv">Un día en ÓRBITA</div>
+  <h2 class="big rv" style="margin-top:14px">Te acompaña<br><span class="grad">de la mañana a la noche.</span></h2></div>
+  <div class="day">
+    <div class="clock" aria-live="polite"><div class="t" id="clockT">10:30</div><div class="who" id="clockW">Mentor</div><div class="what" id="clockX">Buenos días. Arriba, que el día no se gana en la cama.</div></div>
+    <div class="timeline" id="timeline">
+      <div class="ping" data-w="Mentor" data-x="Buenos días. Arriba, que el día no se gana en la cama."><time>10:30</time><div><b>Levantarse</b><span>Tu nota del día ya está creada según tu calendario.</span></div></div>
+      <div class="ping" data-w="Skincare" data-x="Rutina de mañana. Y la crema solar, que se te olvida."><time>12:00</time><div><b>Piel de mañana</b><span>Rutina y protector solar.</span></div></div>
+      <div class="ping" data-w="Entrenador" data-x="Toca entreno. Dime cuando estés en el gimnasio."><time>13:30</time><div><b>Entreno</b><span>Solo los días que toca. Los sábados, no.</span></div></div>
+      <div class="ping" data-w="Mentor" data-x="¿Te has comido ya la rana? Es lo único importante de hoy."><time>18:00</time><div><b>La rana</b><span>La tarea más importante del día, sin esquivarla.</span></div></div>
+      <div class="ping" data-w="Mentor" data-x="Módulo de Fénix de hoy. Veinte minutos, sin móvil."><time>19:30</time><div><b>Fénix</b><span>Un módulo del Seminario Fénix.</span></div></div>
+      <div class="ping" data-w="Coach" data-x="¿Cómo te sientes hoy? Cuéntamelo con calma."><time>21:00</time><div><b>Ánimo</b><span>Un momento para ti.</span></div></div>
+      <div class="ping" data-w="Skincare" data-x="Rutina de noche y a descansar."><time>22:15</time><div><b>Piel de noche</b><span>Limpieza y crema.</span></div></div>
+      <div class="ping" data-w="Director" data-x="Cerramos el día. Esto es lo que has hecho, y esto es mañana."><time>22:45</time><div><b>Cierre</b><span>Resumen del día y plan de mañana.</span></div></div>
+      <div class="ping" data-w="Mentor" data-x="Diez páginas antes de dormir. Leer te cambia."><time>23:30</time><div><b>Libro</b><span>Lectura antes de dormir.</span></div></div>
+    </div>
+  </div>
+</div></section>
+
+<section id="chat"><div class="wrap chatwrap">
+  <div>
+    <div class="eyebrow rv">La oficina</div>
+    <h2 class="mid rv" style="margin-top:14px">Escríbeles.<br><span class="grad">Te contestan.</span></h2>
+    <p class="lead rv" style="margin-top:20px">Cada agente tiene su puesto y su chat dentro de Obsidian. Les escribes y responden en directo con el tono de un amigo que te conoce.</p>
+    <div class="points rv">
+      <div><b>Te preguntan ellos primero</b><span>Avisos a la hora justa, con un punto rojo hasta que los lees.</span></div>
+      <div><b>Recuerdan lo que dijiste</b><span>Todo queda en tu vault: tu historial es tuyo.</span></div>
+      <div><b>En el PC y en el móvil</b><span>El chat se sincroniza solo. Sin reiniciar nada.</span></div>
+    </div>
+  </div>
+  <div class="device rv" aria-label="Ejemplo de conversación con el Entrenador">
+    <div class="screen">
+      <div class="hd"><div class="av">🏋️</div><div>Entrenador<small>● en línea</small></div></div>
+      <div class="msgs" id="msgs"></div>
+    </div>
+  </div>
+</div></section>
+
+<section id="metas" style="background:#06050a"><div class="wrap center">
+  <div class="eyebrow rv">Metas del mes</div>
+  <h2 class="big rv" style="margin-top:14px">Cuatro metas.<br><span class="grad">Una semana cada vez.</span></h2>
+  <p class="lead rv" style="margin-top:22px">Cada mes eliges cuatro metas. ÓRBITA las parte en mini-objetivos semanales, el equipo las revisa cada domingo y el último día hace el cierre contigo.</p>
+  <div class="goals" style="text-align:left" aria-label="Ejemplo de metas del mes">
+    <div class="goal rv"><div class="k">META 1 · DINERO</div><b>Primer cliente de informática</b><div class="bar"><i style="--w:75%"></i></div><div class="weeks"><span class="ok">S1</span><span class="ok">S2</span><span class="ok">S3</span><span>S4</span></div></div>
+    <div class="goal rv"><div class="k">META 2 · CUERPO</div><b>12 entrenos en el mes</b><div class="bar"><i style="--w:58%"></i></div><div class="weeks"><span class="ok">S1</span><span class="ok">S2</span><span>S3</span><span>S4</span></div></div>
+    <div class="goal rv"><div class="k">META 3 · MENTE</div><b>Terminar 8 módulos de Fénix</b><div class="bar"><i style="--w:50%"></i></div><div class="weeks"><span class="ok">S1</span><span class="ok">S2</span><span>S3</span><span>S4</span></div></div>
+    <div class="goal rv"><div class="k">META 4 · HÁBITOS</div><b>Leer 2 libros</b><div class="bar"><i style="--w:40%"></i></div><div class="weeks"><span class="ok">S1</span><span>S2</span><span>S3</span><span>S4</span></div></div>
+  </div>
+  <p style="color:var(--dim);font-size:13px;margin-top:18px">Ejemplo ilustrativo.</p>
+</div></section>
+
+<section id="base"><div class="wrap">
+  <div class="base">
+    <div class="eyebrow rv">El método</div>
+    <h2 class="mid rv" style="margin-top:14px;max-width:760px">Construido sobre lo que <span class="grad">de verdad cambia hábitos.</span></h2>
+    <div class="cols">
+      <div class="rv"><div class="n grad">Tracy</div><b>Método Brian Tracy</b><span>Metas por escrito, prioridades claras y comerse la rana primero.</span></div>
+      <div class="rv"><div class="n grad">27</div><b>Seminario Fénix</b><span>Los 27 módulos, integrados en tu semana con un aviso diario.</span></div>
+      <div class="rv"><div class="n grad">∞</div><b>«Si lo crees, lo creas»</b><span>La base mental de todo el sistema: creer primero, construir después.</span></div>
+    </div>
+    <p class="quote rv">«Si lo crees, lo creas.»</p>
+  </div>
+</div></section>
+
+<section id="obsidian" style="padding-top:0"><div class="wrap center">
+  <div class="eyebrow rv">Hecho para Obsidian</div>
+  <h2 class="big rv" style="margin-top:14px">Tus notas.<br><span class="grad">Tu vida. Tus datos.</span></h2>
+  <div class="duo" style="text-align:left">
+    <div class="tile rv">
+      <h3>Todo vive en tu vault.</h3>
+      <p>Archivos Markdown normales, en carpetas claras. Sin servidores de terceros guardando tu vida.</p>
+      <div class="files">ORBITA/
+  0_NUCLEO      <em>estado, metas, trato</em>
+  1_DINERO
+  2_CUERPO
+  3_MENTE       <em>método Tracy, Fénix</em>
+  6_EQUIPO      <em>agentes y chat</em>
+  7_DIARIO      <em>una nota por día</em></div>
+    </div>
+    <div class="tile rv">
+      <h3>En el PC y en el bolsillo.</h3>
+      <p>Sincroniza con tu nube y continúa en el móvil exactamente donde lo dejaste.</p>
+      <div class="sync" aria-hidden="true"><div class="dev">PC</div><div class="flow"></div><div class="dev ph">📱</div></div>
+      <p style="margin-top:26px">Nota diaria automática, plan de mañana cada noche y cambio de día a medianoche. Sin tocar nada.</p>
+    </div>
+  </div>
+</div></section>
+
+<section class="final"><div class="wrap">
+  <img class="rv" src="logo.jpg" alt="">
+  <h2 class="big rv" style="margin-top:34px">Pon tu vida<br><span class="grad">en órbita.</span></h2>
+  <p class="lead rv" style="margin:20px auto 0">Gratis y de código abierto. Descárgalo, ábrelo en Obsidian y conoce a tu equipo.</p>
+  <div class="cta">
+    <a class="btn pri" href="https://github.com/Fatalyy/ORBITA/releases/latest" target="_blank" rel="noopener">Descargar ÓRBITA</a>
+    <a class="btn sec" href="https://github.com/Fatalyy/ORBITA" target="_blank" rel="noopener">Ver en GitHub</a>
+  </div>
+</div></section>
+
+<footer><div class="wrap"><span>ÓRBITA · Sistema personal con IA para Obsidian</span><span>Hecho en Jerez · 2026</span></div></footer>
+
+<script>
+(()=>{
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Agujero negro optimizado: todo lo estático se pinta una vez; por fotograma solo se mueven las partículas (por lotes)
+const c=document.getElementById('bh'),x=c.getContext('2d',{alpha:false});
+let W,H,cx,cy,Rh,P=[],L1,L2,d=1,visible=true;
+const TILT=.12,N=matchMedia('(max-width:700px)').matches?900:1600,BK=8;
+const off=()=>{const o=document.createElement('canvas');o.width=W*d;o.height=H*d;const g=o.getContext('2d');g.setTransform(d,0,0,d,0,0);return[o,g]};
+function disk(g,alpha,front){g.save();if(front){g.beginPath();g.rect(0,cy,W,H);g.clip();g.beginPath();g.rect(0,0,W,H);g.arc(cx,cy,Rh*1.02,0,6.283);g.clip('evenodd');}
+ g.translate(cx,cy);g.scale(1,TILT);const dg=g.createRadialGradient(0,0,Rh*1.45,0,0,Rh*4.6);
+ dg.addColorStop(0,`rgba(255,255,255,${.75*alpha})`);dg.addColorStop(.18,`rgba(215,210,255,${.55*alpha})`);dg.addColorStop(.5,`rgba(130,110,255,${.18*alpha})`);dg.addColorStop(1,'rgba(0,0,0,0)');
+ g.fillStyle=dg;g.beginPath();g.arc(0,0,Rh*4.6,0,6.283);g.arc(0,0,Rh*1.45,0,6.283,true);g.fill();g.restore();}
+function setup(){const r=c.getBoundingClientRect();d=Math.min(devicePixelRatio||1,1.5);W=r.width;H=r.height;c.width=W*d;c.height=H*d;x.setTransform(d,0,0,d,0,0);
+ const v=document.querySelector('.void').getBoundingClientRect();cx=W/2;cy=v.top-r.top+v.height*.5;Rh=Math.min(W*.085,v.height*.2,120);
+ // Capa trasera: fondo, estrellas, halo, disco de atrás y arco de la lente
+ let g;[L1,g]=off();g.fillStyle='#000';g.fillRect(0,0,W,H);
+ for(let i=0;i<W*H/1800;i++){const a=Math.random();g.globalAlpha=.15+a*.7;g.fillStyle=a>.93?'#cfe4ff':'#fff';g.fillRect(Math.random()*W,Math.random()*H,a>.9?1.6:1,a>.9?1.6:1);}
+ g.globalAlpha=1;const hg=g.createRadialGradient(cx,cy,Rh,cx,cy,Rh*7);hg.addColorStop(0,'rgba(140,120,255,.22)');hg.addColorStop(.4,'rgba(80,110,255,.07)');hg.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=hg;g.fillRect(0,0,W,H);
+ g.globalCompositeOperation='lighter';disk(g,1,false);
+ g.shadowColor='rgba(220,225,255,.9)';g.shadowBlur=26;g.lineCap='round';
+ const ag=g.createLinearGradient(cx-Rh*1.4,0,cx+Rh*1.4,0);ag.addColorStop(0,'rgba(170,150,255,.55)');ag.addColorStop(.5,'rgba(255,255,255,.9)');ag.addColorStop(1,'rgba(150,225,255,.6)');
+ g.lineCap='butt';g.strokeStyle=ag;g.globalAlpha=.45;g.lineWidth=Rh*.1;g.beginPath();g.arc(cx,cy,Rh*1.16,0,6.283);g.stroke();g.globalAlpha=1;g.lineWidth=Rh*.15;g.beginPath();g.arc(cx,cy,Rh*1.19,Math.PI*1.08,Math.PI*1.92);g.stroke();
+ g.globalAlpha=.25;g.lineWidth=Rh*.07;g.beginPath();g.ellipse(cx,cy,Rh*1.12,Rh*1.1,0,Math.PI*.06,Math.PI*.94);g.stroke();
+ // Capa delantera: horizonte, anillo de fotones y disco de delante
+ [L2,g]=off();g.fillStyle='#000';g.beginPath();g.arc(cx,cy,Rh,0,6.283);g.fill();g.globalCompositeOperation='lighter';
+ g.shadowColor='rgba(200,210,255,.9)';g.shadowBlur=18;g.strokeStyle='rgba(235,240,255,.75)';g.lineWidth=1.6;g.beginPath();g.arc(cx,cy,Rh*1.03,0,6.283);g.stroke();g.shadowBlur=0;disk(g,.8,true);
+ P=Array.from({length:N},()=>{const u=Math.random(),r=Rh*(1.55+Math.pow(u,2.2)*2.9),k=(r/Rh-1.55)/2.9;
+  return{r,t:Math.random()*6.283,w:.0045*Math.pow(1.55*Rh/r,1.5),z:Math.random()*1.2+.8,k,col:`rgb(${Math.round(255-k*120)},${Math.round(250-k*150)},255)`}});}
+const buckets=Array.from({length:BK},()=>[]);
+function pass(list,proj,alphaMul){for(const b of buckets)b.length=0;
+ for(const p of list){const br=Math.max(.05,(.25+.75*(1-p.k))*(.55+.45*Math.cos(p.t)))*alphaMul;buckets[Math.min(BK-1,br*BK|0)].push(p);}
+ for(let i=0;i<BK;i++){const b=buckets[i];if(!b.length)continue;x.globalAlpha=(i+.5)/BK;
+  for(const p of b){const q=proj(p);x.fillStyle=p.col;x.fillRect(q[0],q[1],p.z,p.z);}}x.globalAlpha=1;}
+const flat=p=>[cx+p.r*Math.cos(p.t),cy+p.r*Math.sin(p.t)*TILT];
+const lens=p=>{const l=Rh*1.04+(p.r-Rh*1.55)*.11,a=Math.cos(p.t);return[cx+l*a,cy-l*Math.sqrt(1-a*a)]};
+function frame(step){const back=[],front=[];for(const p of P){p.t+=p.w*step;(Math.sin(p.t)<0?back:front).push(p);}
+ x.globalCompositeOperation='source-over';x.drawImage(L1,0,0,W,H);x.globalCompositeOperation='lighter';
+ pass(back,flat,.8);pass(back,lens,.6);
+ x.globalCompositeOperation='source-over';x.drawImage(L2,0,0,W,H);x.globalCompositeOperation='lighter';
+ pass(front,flat,1);x.globalCompositeOperation='source-over';}
+let last=0;function loop(t){if(visible){const dt=last?Math.min(3,(t-last)/16.7):1;if(t-last>=30){frame(dt);last=t;}}requestAnimationFrame(loop);}
+setup();frame(0);
+if(!reduce){new IntersectionObserver(e=>{visible=e[0].isIntersecting;last=0;}).observe(c);requestAnimationFrame(loop);}
+let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{setup();frame(0);},150);});
+
+// Aparición al hacer scroll (con seguro: a los 3 s se muestra todo)
+const rv=[...document.querySelectorAll('.rv')];
+if(!reduce&&'IntersectionObserver' in window){
+  const below=rv.filter(e=>e.getBoundingClientRect().top>innerHeight*.9);
+  below.forEach(e=>e.classList.add('pre'));
+  let fired=false;const ro=new IntersectionObserver(es=>es.forEach(e=>{fired=true;if(e.isIntersecting){e.target.classList.remove('pre');ro.unobserve(e.target);}}),{rootMargin:'0px 0px -8% 0px'});
+  below.forEach(e=>ro.observe(e));
+  setTimeout(()=>{if(!fired)below.forEach(e=>e.classList.remove('pre'));},2500);
+}
+
+// Reloj del día
+const pings=[...document.querySelectorAll('.ping')],T=document.getElementById('clockT'),CWho=document.getElementById('clockW'),X=document.getElementById('clockX');
+let cur=-1;const set=i=>{if(i===cur)return;cur=i;pings.forEach((p,j)=>p.classList.toggle('on',j===i));const p=pings[i];T.textContent=p.querySelector('time').textContent;CWho.textContent=p.dataset.w;X.textContent=p.dataset.x;};
+set(0);
+const io=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting)set(pings.indexOf(e.target));},{rootMargin:'-45% 0px -45% 0px'});
+pings.forEach(p=>io.observe(p));
+
+// Chat animado
+const M=document.getElementById('msgs');
+const conv=[['me','Hoy no me apetece entrenar, estoy reventado.'],['ag','Entrenador','¿Reventado o sin ganas? Que no es lo mismo.'],['me','Sin ganas, la verdad 😅'],['ag','Entrenador','Pues 30 minutos. Calientas y decides. Si a los 10 sigues igual, te vas a casa.'],['me','Vale, voy.'],['ag','Entrenador','Eso es. Mañana me lo agradeces. 💪']];
+const add=(el)=>{M.appendChild(el);while(M.children.length>7)M.firstChild.remove();};
+function bubble(m){const d=document.createElement('div');d.className='b '+m[0];if(m[0]==='ag'){d.innerHTML='<i></i>';d.firstChild.textContent=m[1];d.append(m[2]);}else d.textContent=m[1];return d;}
+if(reduce){conv.forEach(m=>add(bubble(m)));return;}
+let i=0;
+async function run(){const wait=ms=>new Promise(r=>setTimeout(r,ms));
+ while(true){const m=conv[i%conv.length];
+  if(i%conv.length===0&&i){await wait(2500);M.innerHTML='';}
+  if(m[0]==='ag'){const t=document.createElement('div');t.className='typing';t.innerHTML='<span></span><span></span><span></span>';add(t);await wait(1300);t.remove();}
+  add(bubble(m));i++;await wait(m[0]==='me'?900:1700);}}
+const ob=new IntersectionObserver(e=>{if(e[0].isIntersecting){run();ob.disconnect();}});ob.observe(M);
+// Estado inicial visible (miniatura): dos primeros mensajes
+add(bubble(conv[0]));add(bubble(conv[1]));i=2;
+})();
+</script>
+
+</body>
+</html>
