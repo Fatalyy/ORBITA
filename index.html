@@ -367,8 +367,8 @@ footer{margin-top:clamp(80px,10vw,140px);border-top:1px solid var(--rule)}
       <div class="c tl mono">Sistema personal<br>para Obsidian</div>
       <div class="ticks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div class="c tr mono">Versión 1.0<br>Código abierto</div>
-      <div class="c ml mono">36.686° N — 6.137° O · Jerez</div>
-      <div class="c mr mono">6 agentes · 9 avisos · 27 módulos</div>
+      <div class="c ml mono">5 órbitas · 1 sistema</div>
+      <div class="c mr mono">6 agentes · 9 avisos · 1 día cada vez</div>
       <div class="hero-foot">
         <div class="lede"><span class="serif">Tu vida, en órbita.</span><p>Seis agentes de IA dentro de <b>Obsidian</b> que planifican tu día, siguen tus metas y te preguntan si has cumplido.</p></div>
         <div class="hint mono" id="hint">[ Desliza ]<i></i></div>
@@ -484,7 +484,7 @@ footer{margin-top:clamp(80px,10vw,140px);border-top:1px solid var(--rule)}
       <div class="glist">
         <div class="g" style="--c:#e8c46c;--w:75%"><span class="n">01</span><div><b>Primer cliente</b><small>Dinero · 3 de 4 semanas</small></div><em>75%</em></div>
         <div class="g" style="--c:#5fd3a5;--w:58%"><span class="n">02</span><div><b>12 entrenos</b><small>Cuerpo · 7 de 12</small></div><em>58%</em></div>
-        <div class="g" style="--c:#a78bfa;--w:50%"><span class="n">03</span><div><b>8 módulos de Fénix</b><small>Mente · 4 de 8</small></div><em>50%</em></div>
+        <div class="g" style="--c:#a78bfa;--w:50%"><span class="n">03</span><div><b>8 módulos de mi curso</b><small>Mente · 4 de 8</small></div><em>50%</em></div>
         <div class="g" style="--c:#67e8f9;--w:40%"><span class="n">04</span><div><b>Leer 2 libros</b><small>Hábitos · casi uno</small></div><em>40%</em></div>
       </div>
       <div class="heat" id="heat" aria-label="Calendario de progreso (ejemplo)"></div>
@@ -507,8 +507,8 @@ footer{margin-top:clamp(80px,10vw,140px);border-top:1px solid var(--rule)}
   <div class="idx mono"><span>(08)</span><b>El método</b><span class="ln"></span><span>La base</span></div>
   <p class="quote" id="quote">Si lo crees, <em>lo creas.</em></p>
   <div class="pillars">
-    <div><span class="mono">Metas y prioridades</span><div class="n">Tracy</div><b>Método Brian Tracy</b><span>Metas por escrito, prioridades claras y comerse la rana antes que nada.</span></div>
-    <div><span class="mono">Mentalidad</span><div class="n">27</div><b>Seminario Fénix</b><span>Los 27 módulos, repartidos en tu semana con un aviso diario.</span></div>
+    <div><span class="mono">Metas y prioridades</span><div class="n">1º</div><b>La rana primero</b><span>Metas por escrito, prioridades claras y comerse la rana antes que nada.</span></div>
+    <div><span class="mono">Mentalidad</span><div class="n">1/día</div><b>Tu formación</b><span>Tu curso, seminario o libro, módulo a módulo, con un aviso diario.</span></div>
     <div><span class="mono">Constancia</span><div class="n">1%</div><b>Cada día un poco</b><span>Revisión cada domingo y cierre cada mes. Constancia antes que motivación.</span></div>
   </div>
 </div></section>
@@ -536,7 +536,7 @@ footer{margin-top:clamp(80px,10vw,140px);border-top:1px solid var(--rule)}
       <div><span class="mono">Producto</span><a href="https://github.com/Fatalyy/ORBITA/archive/refs/heads/main.zip" target="_blank" rel="noopener">Descargar</a><a href="#app">La app</a><a href="#equipo">El equipo</a></div>
       <div><span class="mono">Sistema</span><a href="#dia">Un día</a><a href="#metas">Metas</a><a href="#metodo">Método</a></div>
       <div><span class="mono">Comunidad</span><a href="https://discord.gg/y8K3fKPMpN" target="_blank" rel="noopener">Discord</a><a href="https://github.com/Fatalyy/ORBITA" target="_blank" rel="noopener">GitHub</a></div>
-      <div><span class="mono">Hecho en</span><a href="#top">Jerez de la Frontera</a><a href="#top">36.686° N</a></div>
+      <div><span class="mono">Hecho en</span><a href="#top">España</a><a href="#top">Código abierto</a></div>
     </div>
     <div class="f-word" aria-hidden="true">ÓRBITA</div>
     <div class="f-bot mono"><span>© 2026 ÓRBITA</span><span>Licencia MIT</span><span>Tu vida, en órbita.</span></div>
@@ -573,6 +573,20 @@ function measureHole(){const o=copy.querySelector('.o'),bl=copy.querySelector('.
  // centro del hueco de la O real (sin la tilde) y radio interior del hueco
  holeT.x=so.left+(mo.actualBoundingBoxRight-mo.actualBoundingBoxLeft)/2;holeT.y=sb.top-mo.actualBoundingBoxAscent+gh/2;holeT.r=Math.max(8,(Math.min(gw,gh)/2-stem*1.02)*.98);}
 addEventListener('resize',()=>requestAnimationFrame(measureHole));setTimeout(measureHole,60);setTimeout(measureHole,1700);document.fonts&&document.fonts.ready.then(measureHole);
+/* Portada: un solo gesto (rueda, dedo o tecla) recorre la animación entera, suave y sin tener que bajar tres veces */
+(()=>{let anim=false,raf=0;const fin=()=>hero.offsetTop+hero.offsetHeight; // aterriza justo en el primer texto
+ const suave=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const ir=(dest,dur)=>{anim=true;cancelAnimationFrame(raf);const y0=scrollY,d=dest-y0,t0=performance.now();dur=suave?250:dur;
+  const paso=t=>{const k=Math.min(1,(t-t0)/dur),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;scrollTo(0,y0+d*e);if(k<1)raf=requestAnimationFrame(paso);else setTimeout(()=>{anim=false;},180);};raf=requestAnimationFrame(paso);};
+ const bajar=()=>ir(fin(),1700),subir=()=>ir(0,1300);
+ const enHero=()=>scrollY<fin()-2,justoDespues=()=>scrollY<=fin()+4&&scrollY>2;
+ addEventListener('wheel',e=>{if(anim){e.preventDefault();return;}if(Math.abs(e.deltaY)<4)return;
+  if(e.deltaY>0&&enHero()){e.preventDefault();bajar();}else if(e.deltaY<0&&justoDespues()){e.preventDefault();subir();}},{passive:false});
+ let ty=null;addEventListener('touchstart',e=>{ty=e.touches[0].clientY;},{passive:true});
+ addEventListener('touchmove',e=>{if(anim||(ty!==null&&enHero()))e.preventDefault();},{passive:false});
+ addEventListener('touchend',e=>{if(ty===null||anim)return;const dy=ty-e.changedTouches[0].clientY;ty=null;if(dy>25&&enHero())bajar();else if(dy<-25&&justoDespues())subir();},{passive:true});
+ addEventListener('keydown',e=>{if(anim)return;if(['ArrowDown','PageDown',' '].includes(e.key)&&enHero()&&!e.target.closest('input,textarea')){e.preventDefault();bajar();}});
+})();
 /* HERO: progreso → cámara, texto, destello y fundido a negro continuo */
 const copy=$('#copy'),hud=$('#hud'),veil=$('#veil'),glint=$('#glint'),hint=$('#hint');
 let HP=0;
@@ -792,7 +806,7 @@ if(!reduce){let i=2,started=false;const wait=ms=>new Promise(r=>setTimeout(r,ms)
 
 /* El equipo: abanico de cartas que gira con el scroll */
 (()=>{const A=[['Director','#a78bfa','Coordina y cierra el día','Lee tu nota diaria, reparte el trabajo y cada noche deja listo el plan de mañana.','«Mañana: entreno a las 13:30 y la rana por la mañana. Sin excusas.»'],
- ['Mentor','#e8c46c','Metas y disciplina','Método Brian Tracy, Seminario Fénix y «Si lo crees, lo creas». Te pregunta por tu rana del día.','«Cómete la rana primero. ¿Cuál es la tuya hoy?»'],
+ ['Mentor','#e8c46c','Metas y disciplina','Metas por escrito, disciplina y tu formación módulo a módulo. Te pregunta por tu rana del día.','«Cómete la rana primero. ¿Cuál es la tuya hoy?»'],
  ['Estratega','#f0a35e','Dinero y carrera','Ingresos, ahorro y pasos concretos para tu carrera. También dirige tu estudio de contenido.','«Esta semana: lista de servicios y precios terminada.»'],
  ['Entrenador','#5fd3a5','Cuerpo','Sabe qué días toca entreno y cuáles no. Exigente, como un buen entrenador.','«¿Reventado o sin ganas? Que no es lo mismo.»'],
  ['Skincare','#67e8f9','Rutina de piel','Rutina de mañana y de noche, con su aviso a la hora justa. Protector solar incluido.','«¿Te has puesto el protector? Son las 12:00.»'],

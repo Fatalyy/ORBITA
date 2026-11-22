@@ -1647,6 +1647,492 @@ class Cerebro {
   destruir() { this.vivo = false; this.ro.disconnect(); }
 }
 
+/* =========================================================
+   CEREBRO · GALAXIA (WebGL)
+   Tus notas como una galaxia espiral. En el centro, un agujero negro: HOY.
+   Cinco brazos = cinco órbitas (dinero, cuerpo, mente, relaciones, estudios).
+   Lo que has tocado hace poco brilla cerca del centro; lo viejo se va hacia fuera.
+   Los días del diario giran en espiral alrededor del hoy: más brillo = más cumplido.
+   Si el equipo no tiene WebGL, se usa el cerebro clásico.
+   ========================================================= */
+const BRAZOS = ['dinero', 'cuerpo', 'mente', 'relaciones', 'estudios'];
+const TONO = { dinero: [0.95, 0.80, 0.52], cuerpo: [0.64, 0.86, 0.72], mente: [0.78, 0.74, 0.94], relaciones: [0.96, 0.72, 0.74], estudios: [0.64, 0.78, 0.97], nucleo: [1.0, 0.92, 0.80], equipo: [0.72, 0.92, 0.90], diario: [1.0, 0.95, 0.88] };
+const FUENTE_SIS = '-apple-system, "SF Pro Text", "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif';
+const espiral = (k, r) => k * Math.PI * 2 / 5 + 2.15 * Math.log(r / 0.28);
+// Color por distancia al centro (como una galaxia real): blanco cálido → melocotón → rosa → violeta → azul
+const PALETA_RADIO = [[0.0, [1.0, 0.96, 0.92]], [0.55, [1.0, 0.80, 0.72]], [1.1, [1.0, 0.56, 0.74]], [1.8, [0.78, 0.50, 1.0]], [2.6, [0.50, 0.56, 1.0]], [3.6, [0.42, 0.66, 1.0]]];
+function colorRadio(r, azarK) {
+  let a = PALETA_RADIO[0], b = PALETA_RADIO[PALETA_RADIO.length - 1];
+  for (let i = 0; i < PALETA_RADIO.length - 1; i++) if (r >= PALETA_RADIO[i][0] && r <= PALETA_RADIO[i + 1][0]) { a = PALETA_RADIO[i]; b = PALETA_RADIO[i + 1]; break; }
+  const k = Math.min(1, Math.max(0, (r - a[0]) / ((b[0] - a[0]) || 1))); const c = a[1].map((v, i) => v + (b[1][i] - v) * k);
+  const blanco = azarK < 0.22 ? 0.55 : 0; return c.map((v) => v + (1 - v) * blanco); // algunas estrellas jóvenes, casi blancas
+}
+const GAL_VS = `
+attribute vec3 aP; attribute vec4 aC; attribute vec2 aS;
+uniform mat4 uM; uniform float uG, uPx, uT, uFoco, uB, uCielo; uniform mediump float uClaro, uEstrella;
+varying vec4 vC;
+void main(){
+  float r = aP.x; float ph = aP.y + (uCielo > 0.5 ? 0.0 : uG / pow(r + 0.3, 1.1));
+  vec3 p = vec3(r * cos(ph), aP.z, r * sin(ph));
+  gl_Position = uM * vec4(p, 1.0);
+  float tw = 0.84 + 0.16 * sin(uT * (1.1 + fract(aP.y * 7.3)) + aP.y * 17.0 + r * 9.0);
+  float f = 1.0; if (uFoco > -0.5) { f = abs(aS.y - uFoco) < 0.5 ? 1.2 : 0.16; }
+  vec3 tinta = aC.rgb * vec3(0.36, 0.32, 0.28);
+  vC = vec4(mix(aC.rgb, tinta, uClaro), aC.a * tw * f * uB * mix(1.0, 0.75, uClaro));
+  float s = uCielo > 0.5 ? aS.x * uPx : aS.x * uPx / gl_Position.w;
+  gl_PointSize = max(uEstrella > 0.5 ? 3.0 : 1.0, s);
+}`;
+const GAL_FS = `
+precision mediump float;
+varying vec4 vC; uniform float uEstrella, uClaro;
+void main(){
+  vec2 d = gl_PointCoord - 0.5; float dd = dot(d, d);
+  if (dd > 0.25) discard;
+  float k;
+  if (uEstrella > 0.5) { k = exp(-dd * 90.0) * 1.4 + exp(-dd * 12.0) * 0.34 + exp(-dd * 4.0) * 0.08; }
+  else { k = exp(-dd * 26.0); }
+  vec3 c = vC.rgb;
+  if (uEstrella > 0.5) c = mix(c, mix(vec3(1.0), c * 0.6, uClaro), exp(-dd * 140.0) * 0.85);
+  float a = k * vC.a;
+  gl_FragColor = vec4(c * a, a);
+}`;
+const GAL_QUAD = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }';
+// Nebulosa del cielo (se calcula UNA vez en una textura panorámica 2048×1024; luego cada cuadro solo se lee)
+const GAL_NEBULOSA = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform vec2 uRes;
+float hash(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float ruido(vec3 x){ vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(hash(i), hash(i + vec3(1,0,0)), f.x), mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x), mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z); }
+float fbm(vec3 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 6; i++) { s += a * ruido(p); p = p * 2.03 + vec3(1.7, 9.2, 3.1); a *= 0.5; } return s; }
+void main(){
+  vec2 uv = gl_FragCoord.xy / uRes; float lon = uv.x * 6.2831853 - 3.1415926; float lat = (uv.y - 0.5) * 3.1415926;
+  vec3 d = vec3(cos(lat) * cos(lon), sin(lat), cos(lat) * sin(lon));
+  vec3 eje = normalize(vec3(0.69, 0.25, -0.47));
+  float banda = exp(-pow(dot(d, eje) / 0.42, 2.0));
+  float q = fbm(d * 2.1 + 4.0);
+  float det = fbm(d * 5.5 + q * 1.8);
+  float polvo = smoothstep(0.48, 0.78, fbm(d * 7.0 + q * 2.5 + 11.0));
+  vec3 azul = vec3(0.10, 0.16, 0.46), violeta = vec3(0.34, 0.14, 0.52), rosa = vec3(0.70, 0.26, 0.50), melocoton = vec3(0.95, 0.62, 0.52);
+  vec3 c = mix(azul, violeta, smoothstep(0.3, 0.7, q));
+  c = mix(c, rosa, smoothstep(0.5, 0.85, det) * (0.35 + 0.65 * banda));
+  float nucleoBanda = exp(-pow(length(d - normalize(vec3(-0.62, -0.42, -0.66))), 2.0) * 2.2);
+  c = mix(c, melocoton, nucleoBanda * banda * smoothstep(0.4, 0.8, det));
+  float luz = 0.09 + 0.26 * pow(q, 2.0) + 0.85 * banda * pow(det, 1.6) + 0.35 * nucleoBanda * banda;
+  c *= luz; c *= 1.0 - polvo * (0.25 + 0.6 * banda);
+  gl_FragColor = vec4(c, 1.0);
+}`;
+const GAL_FONDO = `
+precision mediump float;
+uniform vec2 uRes, uC; uniform float uR, uTilt, uT, uClaro, uB, uNebK; uniform sampler2D uNeb; uniform vec3 uDr, uDu, uDf; uniform vec2 uTan;
+float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+void main(){
+  vec2 fc = gl_FragCoord.xy; vec2 uv = fc / uRes - 0.5; uv.x *= uRes.x / uRes.y;
+  vec3 bg = mix(vec3(0.004, 0.004, 0.006), vec3(0.925, 0.905, 0.872), uClaro);
+  float vig = 1.0 - dot(uv, uv) * mix(0.75, 0.22, uClaro);
+  vec3 col = bg * mix(1.0, vig, uClaro) ;
+  vec2 q = (fc - uC) / uR; float d = length(vec2(q.x, q.y / max(0.2, uTilt)));
+  float glow = 0.12 * exp(-d * 0.06) + 0.3 * exp(-d * 0.3);
+  col += (1.0 - uClaro) * vec3(1.0, 0.80, 0.60) * glow * uB * 0.42;
+  col -= uClaro * vec3(0.05, 0.055, 0.06) * glow * 1.4;
+  col *= mix(vig, 1.0, uClaro);
+  if (uNebK > 0.0) { vec2 n = gl_FragCoord.xy / uRes * 2.0 - 1.0; vec3 dir = normalize(uDf + n.x * uTan.x * uDr + n.y * uTan.y * uDu);
+    vec2 tuv = vec2((atan(dir.z, dir.x) + 3.1415926) / 6.2831853, asin(clamp(dir.y, -1.0, 1.0)) / 3.1415926 + 0.5);
+    col += texture2D(uNeb, tuv).rgb * uNebK * vig; }
+  col += (h(fc + fract(uT * 0.37) * 97.0) - 0.5) * mix(0.022, 0.03, uClaro);
+  gl_FragColor = vec4(col, 1.0);
+}`;
+const GAL_NUCLEO = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform vec2 uC, uJ; uniform float uR, uTilt, uT, uClaro, uB, uJL;
+float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float n2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h2(i), h2(i + vec2(1, 0)), f.x), mix(h2(i + vec2(0, 1)), h2(i + vec2(1, 1)), f.x), f.y); }
+float fb(vec2 p){ return n2(p) * 0.55 + n2(p * 2.3 + 7.1) * 0.3 + n2(p * 5.1 + 3.3) * 0.15; }
+// Gargantua: sombra, anillo de fotones, disco de acreción delante y su imagen curvada por la gravedad (arco de arriba y de abajo)
+void main(){
+  vec2 q = (gl_FragCoord.xy - uC) / uR; float r = length(q);
+  // Chorros relativistas: dos haces azules que salen por los polos
+  float largo = dot(q, uJ); float lado = abs(q.x * uJ.y - q.y * uJ.x); float al = abs(largo);
+  float ancho = 0.16 + al * 0.045;
+  float chorro = exp(-pow(lado / ancho, 2.0)) * smoothstep(uJL, uJL * 0.15, al) * smoothstep(0.9, 1.6, al);
+  chorro *= 0.55 + 0.45 * n2(vec2(al * 1.3 - uT * 3.0, lado * 6.0)); chorro *= largo > 0.0 ? 1.0 : 0.55;
+  vec3 colChorro = mix(vec3(0.35, 0.5, 1.0), vec3(0.9, 0.95, 1.0), exp(-pow(lado / (ancho * 0.35), 2.0)));
+  if (r > 10.0 && chorro < 0.002) { gl_FragColor = vec4(0.0); return; }
+  float tilt = max(0.1, uTilt);
+  vec2 e = vec2(q.x, q.y / tilt); float re = length(e); float ang = atan(e.y, e.x);
+  float giro = uT * 0.35;
+  // textura turbulenta que gira (más rápido cerca del centro)
+  float tex = fb(vec2(ang * 4.0 - giro * 4.0 / max(re, 1.2) + re * 1.5, re * 3.4));
+  float rayas = 0.78 + 0.22 * sin(re * 7.0 + tex * 11.0 + ang * 2.0);
+  float disco = smoothstep(1.45, 1.9, re) * smoothstep(9.0, 2.2, re) * (0.25 + 0.95 * tex * tex) * rayas;
+  float dop = 0.42 + 0.58 * smoothstep(1.0, -1.0, e.x / max(re, 0.001)); // el lado que se acerca brilla más
+  float temp = smoothstep(3.0, 1.5, re); // cerca del centro, más caliente (más blanco)
+  vec3 colDisco = mix(mix(vec3(0.55, 0.14, 0.04), vec3(1.0, 0.45, 0.12), smoothstep(9.0, 4.0, re)), vec3(1.0, 0.92, 0.78), temp * temp);
+  // imagen lensada: anillo casi circular alrededor de la sombra, más fuerte arriba (la parte de atrás del disco)
+  float sobre = smoothstep(-0.15, 0.85, q.y / max(r, 0.001));
+  float lente = smoothstep(1.0, 1.1, r) * exp(-(r - 1.1) * 3.2) * (0.25 + 0.95 * sobre) * (0.6 + 0.5 * fb(vec2(atan(q.y, q.x) * 4.0 + giro * 2.0, r * 3.0)));
+  float fotones = exp(-pow((r - 1.035) / 0.022, 2.0)) * 1.4;
+  float sombra = 1.0 - smoothstep(0.985, 1.015, r);
+  float delante = step(q.y, 0.0); // la mitad delantera del disco pasa por delante de la sombra
+  float vis = mix(1.0 - sombra, 1.0, delante);
+  float resplandor = exp(-max(r - 1.0, 0.0) * 0.55) * 0.18;
+  vec3 luz = colChorro * chorro * 0.9 * (1.0 - sombra * (1.0 - delante)) + colDisco * disco * dop * 1.5 * vis + vec3(1.0, 0.86, 0.66) * (lente + fotones) * (1.0 - sombra) + vec3(1.0, 0.7, 0.45) * resplandor * (1.0 - sombra);
+  luz *= uB;
+  float aOsc = sombra * (1.0 - delante * clamp(disco * 1.4, 0.0, 1.0));
+  vec3 tinta = vec3(0.16, 0.12, 0.10); float s = clamp(dot(luz, vec3(0.33)) * 0.6, 0.0, 0.9);
+  gl_FragColor = vec4(mix(luz, tinta * s + vec3(0.06, 0.05, 0.05) * sombra, uClaro), mix(aOsc, clamp(s + sombra, 0.0, 1.0), uClaro));
+}`;
+// Galaxias lejanas: pequeñas espirales y elípticas en el cielo, cada una distinta
+const GAL_LEJ_VS = `
+attribute vec3 aP; attribute vec4 aC; attribute vec2 aS; uniform mat4 uM; uniform float uPx, uMaxPt; varying vec4 vC; varying vec2 vX;
+void main(){ vec3 p = vec3(aP.x * cos(aP.y), aP.z, aP.x * sin(aP.y)); gl_Position = uM * vec4(p, 1.0); vC = aC; vX = aS; gl_PointSize = min(uMaxPt, aS.x * uPx); }`;
+const GAL_LEJ_FS = `
+precision mediump float; varying vec4 vC; varying vec2 vX; uniform float uT;
+void main(){
+  vec2 q = gl_PointCoord - 0.5; float s = vX.y; float a0 = s * 6.283 + uT * 0.004 * (fract(s * 3.1) - 0.5);
+  q = mat2(cos(a0), -sin(a0), sin(a0), cos(a0)) * q;
+  float tilt = 0.22 + 0.78 * fract(s * 7.31); q.y /= tilt;
+  float r = length(q) * 2.0; if (r > 1.0) discard;
+  float a = atan(q.y, q.x); float tipo = fract(s * 13.7);
+  float brazos = tipo < 0.72 ? pow(0.5 + 0.5 * cos(2.0 * a - 7.0 * log(r + 0.04) + s * 20.0), 2.5) : 0.35;
+  float nucleo = exp(-r * r * 60.0);
+  float disco = exp(-r * 4.0) * (0.25 + 0.75 * brazos);
+  float k = (nucleo * 1.5 + disco) * smoothstep(1.0, 0.55, r);
+  vec3 col = mix(vC.rgb, vec3(1.0, 0.93, 0.82), clamp(nucleo * 1.3 + (1.0 - r) * 0.25, 0.0, 1.0));
+  gl_FragColor = vec4(col * k * vC.a, k * vC.a);
+}`;
+
+class CerebroGalaxia {
+  constructor(contenedor, app, opts) {
+    this.app = app; this.opts = opts || {};
+    this.cfg = Object.assign({}, CEREBRO_BASE, this.opts.cfg || {});
+    this.canvas = contenedor.createEl('canvas', { cls: 'orb-lienzo orb-galaxia' });
+    const gl = this.canvas.getContext('webgl', { antialias: false, alpha: false, premultipliedAlpha: true, powerPreference: 'high-performance' });
+    if (!gl) { this.canvas.remove(); throw new Error('sin WebGL'); }
+    this.gl = gl;
+    this.capa = contenedor.createEl('canvas', { cls: 'orb-lienzo orb-galaxia-capa' }); this.ctx = this.capa.getContext('2d');
+    this.reducido = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.yaw = 0.6; this.pitch = 0.58; this.zoom = 1; this.foco = null; this.sobre = null; this.busca = ''; this.giro = 0;
+    this.vivo = true; this.t0 = performance.now(); this.tUlt = this.t0; this.quieto = 0; this.notas = []; this.enlaces = []; this.pulsos = [];
+    this.calidad = 1; this.lentos = 0; this.rapidos = 0;
+    this.ajustar = this.ajustar.bind(this); this.cuadro = this.cuadro.bind(this);
+    this.programas(); this.polvo();
+    this.ro = new ResizeObserver(this.ajustar); this.ro.observe(this.canvas);
+    this.ajustar(); this.eventos(); this.datos();
+    requestAnimationFrame(this.cuadro);
+  }
+  region(id) { return REGIONES.find((r) => r.id === id); }
+  regionDe(ruta) { return REGIONES.find((r) => ruta.startsWith(r.carpeta + '/')); }
+  programas() {
+    const gl = this.gl;
+    const prog = (vs, fs) => {
+      const p = gl.createProgram();
+      [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]].forEach(([t, src]) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); gl.attachShader(p, s); });
+      gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+      const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(p, i); u[a.name] = gl.getUniformLocation(p, a.name); }
+      return { p, u };
+    };
+    this.pGal = prog(GAL_VS, GAL_FS); this.pFondo = prog(GAL_QUAD, GAL_FONDO); this.pNucleo = prog(GAL_QUAD, GAL_NUCLEO); this.pLej = prog(GAL_LEJ_VS, GAL_LEJ_FS);
+    this.maxPt = (gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE) || [1, 64])[1];
+    try { // nebulosa: se pinta una sola vez en una textura
+      const pn = prog(GAL_QUAD, GAL_NEBULOSA); const W = 2048, H = 1024; const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, W, H, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+      const bq = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, bq); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      gl.viewport(0, 0, W, H); gl.useProgram(pn.p); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0); gl.uniform2f(pn.u.uRes, W, H); gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.deleteFramebuffer(fb); gl.deleteProgram(pn.p); this.texNeb = tex;
+    } catch (e) { this.texNeb = null; }
+    this.aP = gl.getAttribLocation(this.pGal.p, 'aP'); this.aC = gl.getAttribLocation(this.pGal.p, 'aC'); this.aS = gl.getAttribLocation(this.pGal.p, 'aS');
+    this.bQuad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.bQuad); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    this.bPolvo = gl.createBuffer(); this.bNotas = gl.createBuffer();
+  }
+  // Polvo: brazos espirales, disco difuso y bulbo central (una sola vez, con semilla fija)
+  polvo() {
+    const rnd = azar('galaxia-orbita'); const gauss = () => { let u = 0, v = 0; while (u === 0) u = rnd(); v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(6.2832 * v); };
+    const N = Math.round(80000); const D = new Float32Array(N * 9); let o = 0;
+    const blanco = [1.0, 0.95, 0.88];
+    for (let i = 0; i < N; i++) {
+      const tipo = rnd(); let r, ph, y, reg, c, a, s;
+      if (tipo < 0.06) { // ramas entre brazos (como plumas que salen hacia fuera)
+        const k = Math.floor(rnd() * 5); const r0 = 0.8 + 2.2 * rnd(); const l = rnd() * 0.5; r = r0 + l; ph = espiral(k, r0) + l * 0.9 + gauss() * 0.03; y = gauss() * 0.03; reg = k;
+        c = colorRadio(r, rnd()); a = (0.2 + 0.4 * rnd()) * (1 - l * 1.4);
+      } else if (tipo < 0.09) { // cúmulos donde nacen estrellas: rosas y azules, brillantes
+        const k = Math.floor(rnd() * 5); r = 0.9 + 2.3 * rnd(); ph = espiral(k, r) + gauss() * 0.05; y = gauss() * 0.02; reg = k;
+        c = rnd() < 0.6 ? [1.0, 0.45 + 0.15 * rnd(), 0.72] : [0.62, 0.74, 1.0]; a = 0.55 + 0.4 * rnd();
+      } else if (tipo < 0.76) { // brazos
+        const k = Math.floor(rnd() * 5); r = 0.55 + 2.9 * Math.pow(rnd(), 0.85);
+        ph = espiral(k, r) + gauss() * (0.07 + 0.035 * r) / Math.max(0.55, r * 0.6);
+        y = gauss() * (0.035 + 0.02 * r); reg = k;
+        const g0 = colorRadio(r, rnd()); const t = TONO[BRAZOS[k]]; const m = 0.12;
+        c = [g0[0] + (t[0] - g0[0]) * m, g0[1] + (t[1] - g0[1]) * m, g0[2] + (t[2] - g0[2]) * m];
+        a = (0.28 + 0.62 * rnd()) * (1.2 - r / 4.2) * (0.4 + 0.6 * Math.min(1, r / 1.3));
+      } else if (tipo < 0.92) { // disco difuso
+        r = 0.65 + Math.min(3.6, -Math.log(1 - rnd() * 0.97) * 1.05); ph = rnd() * 6.2832; y = gauss() * 0.06; reg = 6;
+        c = colorRadio(r, rnd()); a = 0.08 + 0.22 * rnd();
+      } else { // bulbo
+        r = Math.abs(gauss()) * 0.5 + 0.5; ph = rnd() * 6.2832; y = gauss() * 0.12 * (1 - Math.min(1, r)); reg = 5;
+        c = colorRadio(r, rnd()); a = 0.05 + 0.14 * rnd();
+      }
+      s = 0.7 + rnd() * 1.2; if (rnd() < 0.012) { s *= 2.6; a = Math.min(1, a * 1.8); }
+      D[o++] = r; D[o++] = ph; D[o++] = y; D[o++] = c[0]; D[o++] = c[1]; D[o++] = c[2]; D[o++] = a; D[o++] = s; D[o++] = reg;
+    }
+    this.nPolvo = N; const gl = this.gl; gl.bindBuffer(gl.ARRAY_BUFFER, this.bPolvo); gl.bufferData(gl.ARRAY_BUFFER, D, gl.STATIC_DRAW);
+    const NN = 2600; const Q = new Float32Array(NN * 9); o = 0;
+    for (let i = 0; i < NN; i++) {
+      const enBrazo = rnd() < 0.93; const k = Math.floor(rnd() * 5); const r = enBrazo ? 0.35 + 3.0 * Math.pow(rnd(), 0.9) : Math.abs(gauss()) * 0.55 + 0.12;
+      const ph = enBrazo ? espiral(k, r) + gauss() * 0.11 : rnd() * 6.2832; const t = colorRadio(r, 1);
+      Q[o++] = r; Q[o++] = ph; Q[o++] = gauss() * 0.03; Q[o++] = t[0]; Q[o++] = t[1]; Q[o++] = t[2];
+      Q[o++] = (enBrazo ? (0.09 + 0.09 * rnd()) * (0.35 + 0.65 * Math.min(1, r / 1.3)) : 0.05 + 0.04 * rnd()) * (1.2 - r / 4.2); Q[o++] = (enBrazo ? 12 + rnd() * 22 : 16 + rnd() * 20) * (0.65 + 0.35 * (1 - r / 3.5)); Q[o++] = enBrazo ? k : 5;
+    }
+    this.nNubes = NN; this.bNubes = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.bNubes); gl.bufferData(gl.ARRAY_BUFFER, Q, gl.STATIC_DRAW);
+    // Cielo: estrellas lejanas con colores reales (azuladas, blancas, amarillas y naranjas) y una banda más densa
+    const NC = 14000; const C = new Float32Array(NC * 9); o = 0;
+    const tipos = [[0.72, 0.8, 1.0], [0.88, 0.92, 1.0], [1.0, 1.0, 1.0], [1.0, 0.95, 0.84], [1.0, 0.84, 0.66], [1.0, 0.74, 0.58]];
+    for (let i = 0; i < NC; i++) {
+      let x = gauss(), y = gauss(), z = gauss(); if (i < NC * 0.6) { y *= 0.14; const a = 0.5; const yy = y * Math.cos(a) - z * Math.sin(a); z = y * Math.sin(a) + z * Math.cos(a); y = yy; }
+      const l = Math.hypot(x, y, z) || 1; x = x / l * 40; y = y / l * 40; z = z / l * 40;
+      const t = tipos[Math.floor(Math.pow(rnd(), 0.8) * tipos.length)]; const brillo = Math.pow(rnd(), 3);
+      C[o++] = Math.hypot(x, z); C[o++] = Math.atan2(z, x); C[o++] = y; C[o++] = t[0]; C[o++] = t[1]; C[o++] = t[2];
+      C[o++] = 0.25 + 0.75 * brillo; C[o++] = 0.8 + brillo * 2.2 + (rnd() < 0.01 ? 1.6 : 0); C[o++] = 7;
+    }
+    // Galaxias lejanas (espirales y elípticas) repartidas por el cielo
+    const NL = 26; const L = new Float32Array(NL * 9); o = 0; const tonosL = [[0.75, 0.82, 1.0], [1.0, 0.86, 0.72], [0.92, 0.78, 1.0], [1.0, 0.75, 0.85], [0.8, 0.95, 1.0]];
+    for (let i = 0; i < NL; i++) { let x = gauss(), y = gauss(), z = gauss(); const l = Math.hypot(x, y, z) || 1; x = x / l * 38; y = y / l * 38; z = z / l * 38; const t = tonosL[i % tonosL.length]; const grande = i < 3;
+      L[o++] = Math.hypot(x, z); L[o++] = Math.atan2(z, x); L[o++] = y; L[o++] = t[0]; L[o++] = t[1]; L[o++] = t[2]; L[o++] = grande ? 0.9 : 0.45 + 0.4 * rnd(); L[o++] = grande ? 70 + rnd() * 50 : 14 + rnd() * 26; L[o++] = rnd(); }
+    this.nLej = NL; this.bLej = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.bLej); gl.bufferData(gl.ARRAY_BUFFER, L, gl.STATIC_DRAW);
+    this.nCielo = NC; this.bCielo = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.bCielo); gl.bufferData(gl.ARRAY_BUFFER, C, gl.STATIC_DRAW);
+    // Bandas de polvo oscuro por el borde interior de cada brazo (dan profundidad, como en las fotos reales)
+    const NO = 5200; const Z = new Float32Array(NO * 9); o = 0;
+    for (let i = 0; i < NO; i++) { const k = Math.floor(rnd() * 5); const r = 0.5 + 2.6 * Math.pow(rnd(), 0.9); Z[o++] = r; Z[o++] = espiral(k, r) - 0.16 + gauss() * 0.05; Z[o++] = gauss() * 0.02; Z[o++] = 0; Z[o++] = 0; Z[o++] = 0; Z[o++] = 0.035 + 0.05 * rnd(); Z[o++] = 8 + rnd() * 12; Z[o++] = k; }
+    this.nOscuro = NO; this.bOscuro = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.bOscuro); gl.bufferData(gl.ARRAY_BUFFER, Z, gl.STATIC_DRAW);
+  }
+  async datos() {
+    const rnd = azar('notas-galaxia'); const gauss = () => { let u = 0; while (u === 0) u = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(6.2832 * rnd()); };
+    const archivos = this.app.vault.getMarkdownFiles().filter((f) => f.path.startsWith(RAIZ + '/') && !f.path.startsWith(CARPETAS.archivo + '/') && !f.path.startsWith(CARPETAS.plantillas + '/'));
+    const resolved = (this.app.metadataCache && this.app.metadataCache.resolvedLinks) || {};
+    const grado = {}; for (const a in resolved) for (const b in resolved[a]) { grado[a] = (grado[a] || 0) + 1; grado[b] = (grado[b] || 0) + 1; }
+    const porReg = {}; for (const f of archivos) { const R = this.regionDe(f.path); if (!R) continue; (porReg[R.id] = porReg[R.id] || []).push(f); }
+    const notas = [];
+    for (const id in porReg) {
+      const lista = porReg[id];
+      if (id === 'diario') { // espiral de días alrededor del hoy: el más reciente, pegado al centro
+        lista.sort((a, b) => b.basename.localeCompare(a.basename));
+        lista.forEach((f, i) => notas.push({ f, reg: id, r: 0.5 + i * 0.006, ph0: -i * 0.33 - 1.2, y: 0, tam: f.basename === hoyISO() ? 8 : 3.6, pct: null, mtime: (f.stat && f.stat.mtime) || 0 }));
+        continue;
+      }
+      lista.sort((a, b) => ((b.stat && b.stat.mtime) || 0) - ((a.stat && a.stat.mtime) || 0));
+      const k = BRAZOS.indexOf(id);
+      lista.forEach((f, i) => {
+        let r, ph, y;
+        if (k < 0) { r = 0.72 + rnd() * 0.32; ph = rnd() * 6.2832; y = gauss() * 0.05; } // núcleo y equipo, en el bulbo
+        else { const u = lista.length > 1 ? i / (lista.length - 1) : 0; r = 1.0 + 2.2 * Math.pow(u, 0.8) + gauss() * 0.09; ph = espiral(k, r) + gauss() * (0.14 / Math.max(0.8, r * 0.5)); y = gauss() * 0.04; }
+        notas.push({ f, reg: id, r, ph0: ph, y, tam: 4.6 + Math.min(6, (grado[f.path] || 0) * 0.6), pct: null, mtime: (f.stat && f.stat.mtime) || 0 });
+      });
+    }
+    for (const n of notas.filter((n) => n.reg === 'diario')) { try { const d = parsearDia(await this.app.vault.cachedRead(n.f)); n.pct = d && d.total ? d.hechas / d.total : 0; } catch (e) { n.pct = 0; } }
+    const porRuta = {}; notas.forEach((n) => { porRuta[n.f.path] = n; });
+    this.enlaces = []; for (const a in resolved) for (const b in resolved[a]) if (porRuta[a] && porRuta[b] && a !== b) this.enlaces.push([porRuta[a], porRuta[b]]);
+    this.vecinos = new Map(); for (const [a, b] of this.enlaces) { if (!this.vecinos.has(a)) this.vecinos.set(a, new Set()); if (!this.vecinos.has(b)) this.vecinos.set(b, new Set()); this.vecinos.get(a).add(b); this.vecinos.get(b).add(a); }
+    this.notas = notas; this.bufNotas = new Float32Array(notas.length * 9);
+    this.cuenta = {}; REGIONES.forEach((R) => { this.cuenta[R.id] = notas.filter((n) => n.reg === R.id).length; });
+    let palabras = 0; for (const n of notas) { try { const t = await this.app.vault.cachedRead(n.f); palabras += (t.match(/\S+/g) || []).length; } catch (e) { /* nada */ } }
+    this.palabras = palabras;
+    if (this.opts.alDatos) this.opts.alDatos(this);
+  }
+  ajustar() {
+    const q = this.calidad; const dpr = Math.min(window.devicePixelRatio || 1, q > 0.8 ? 1.5 : 1);
+    const w = this.canvas.clientWidth || 800, h = this.canvas.clientHeight || 600;
+    this.w = w; this.h = h; this.dpr = dpr;
+    this.canvas.width = Math.round(w * dpr); this.canvas.height = Math.round(h * dpr);
+    const d2 = Math.min(window.devicePixelRatio || 1, 2); this.capa.width = Math.round(w * d2); this.capa.height = Math.round(h * d2); this.d2 = d2;
+  }
+  // Cámara: órbita alrededor del centro (yaw, inclinación y distancia)
+  matriz() {
+    const D = 9.6 / this.zoom; const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch), cy = Math.cos(this.yaw), sy = Math.sin(this.yaw);
+    const ex = D * cp * sy, ey = D * sp, ez = D * cp * cy;
+    let fx = -ex, fy = -ey, fz = -ez; let l = Math.hypot(fx, fy, fz); fx /= l; fy /= l; fz /= l;
+    const lh = Math.hypot(fx, fz) || 1; const rx = -fz / lh, ry = 0, rz = fx / lh; // derecha = f × arriba
+    const ux = ry * fz - rz * fy, uy = rz * fx - rx * fz, uz = rx * fy - ry * fx; this.base = { r: [rx, ry, rz], u: [ux, uy, uz], f: [fx, fy, fz] };
+    const V = [rx, ux, -fx, 0, ry, uy, -fy, 0, rz, uz, -fz, 0, -(rx * ex + ry * ey + rz * ez), -(ux * ex + uy * ey + uz * ez), (fx * ex + fy * ey + fz * ez), 1];
+    const fov = 0.62, asp = this.w / this.h, n = 0.05, f = 60, t = 1 / Math.tan(fov / 2);
+    const off = this.fondo || this.w < 900 ? 0 : (2 * 130) / this.w; this.desp = (this.desp == null ? off : this.desp + (off - this.desp) * 0.08); // deja sitio a los paneles de la izquierda
+    const P = [t / asp, 0, 0, 0, 0, t, 0, 0, -this.desp, 0, (f + n) / (n - f), -1, 0, 0, (2 * f * n) / (n - f), 0];
+    const M = new Float32Array(16);
+    for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += P[k * 4 + r] * V[c * 4 + k]; M[c * 4 + r] = s; }
+    this.M = M; this.esc = (this.h / 2) * t; return M;
+  }
+  pos(r, ph0, y) { const ph = ph0 + this.giro / Math.pow(r + 0.3, 1.1); return [r * Math.cos(ph), y, r * Math.sin(ph)]; }
+  proyectar(x, y, z) {
+    const M = this.M; const cx = M[0] * x + M[4] * y + M[8] * z + M[12], cy = M[1] * x + M[5] * y + M[9] * z + M[13], cw = M[3] * x + M[7] * y + M[11] * z + M[15];
+    return { x: (cx / cw * 0.5 + 0.5) * this.w, y: (1 - (cy / cw * 0.5 + 0.5)) * this.h, w: cw, s: this.esc / cw };
+  }
+  eventos() {
+    const c = this.canvas; let arr = null;
+    const pos = (e) => { const r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+    c.addEventListener('pointerdown', (e) => { arr = { ...pos(e), a: this.yaw, i: this.pitch, mov: 0 }; c.setPointerCapture(e.pointerId); });
+    c.addEventListener('pointermove', (e) => {
+      const p = pos(e); this.raton = p;
+      if (arr) { const dx = p.x - arr.x, dy = p.y - arr.y; arr.mov = Math.max(arr.mov, Math.abs(dx) + Math.abs(dy)); this.yawObj = null; this.yaw = arr.a - dx * 0.006; this.pitch = limitar(arr.i + dy * 0.004, 0.08, 1.45); this.quieto = performance.now(); }
+    });
+    c.addEventListener('pointerup', () => {
+      if (arr && arr.mov < 5) {
+        if (this.sobre && this.opts.alAbrir) this.opts.alAbrir(this.sobre.f);
+        else if (this.etiquetaSobre) { this.foco = this.foco === this.etiquetaSobre ? null : this.etiquetaSobre; if (this.opts.alFoco) this.opts.alFoco(); }
+      }
+      arr = null;
+    });
+    c.addEventListener('pointerleave', () => { this.raton = null; });
+    c.addEventListener('wheel', (e) => { e.preventDefault(); this.zoomObj = limitar((this.zoomObj || this.zoom) * (e.deltaY > 0 ? 0.9 : 1.11), 0.5, 3.2); }, { passive: false });
+    c.addEventListener('dblclick', () => { this.zoomObj = 1; this.pitchObj = 0.58; this.foco = null; if (this.opts.alFoco) this.opts.alFoco(); });
+  }
+  cuadro(ahora) {
+    if (!this.vivo) return; requestAnimationFrame(this.cuadro);
+    if (document.hidden || !this.canvas.isConnected || this.canvas.clientWidth === 0) { this.tUlt = ahora; return; }
+    const dt = Math.min(0.05, (ahora - this.tUlt) / 1000); this.tUlt = ahora; const t = (ahora - this.t0) / 1000;
+    // Calidad adaptativa: si va lento, menos polvo y menos resolución
+    const ms = dt * 1000; if (ms > 24) { this.lentos++; this.rapidos = 0; } else if (ms < 14) { this.rapidos++; this.lentos = 0; }
+    if (this.lentos > 40 && this.calidad > 0.35) { this.calidad = Math.max(0.35, this.calidad - 0.2); this.lentos = 0; this.ajustar(); }
+    if (this.rapidos > 240 && this.calidad < 1) { this.calidad = Math.min(1, this.calidad + 0.1); this.rapidos = 0; this.ajustar(); }
+    // Movimiento: giro de la galaxia, deriva lenta de la cámara y suavizado del zoom
+    const vel = 0.05 + this.cfg.velocidad * 0.16;
+    if (this.cfg.girar && !this.reducido) this.giro += dt * vel;
+    const libre = ahora - this.quieto > 3000;
+    if (!this.fondo && !this.reducido && ahora - this.quieto > 6000) this.yaw += dt * 0.012; // la cámara respira despacio cuando no la tocas
+    if (this.fondo && libre && !this.reducido) { this.yaw += dt * 0.035; this.pitch += (0.5 + 0.22 * Math.sin(t * 0.05) - this.pitch) * dt * 0.3; }
+    if (this.zoomObj) { this.zoom += (this.zoomObj - this.zoom) * Math.min(1, dt * 7); if (Math.abs(this.zoomObj - this.zoom) < 0.001) this.zoomObj = null; }
+    if (this.pitchObj) { this.pitch += (this.pitchObj - this.pitch) * Math.min(1, dt * 4); if (Math.abs(this.pitchObj - this.pitch) < 0.002) this.pitchObj = null; }
+    const CL = esClaro(); this.claro = CL; const B = 0.45 + this.cfg.brillo * 1.1, T = 0.55 + this.cfg.tam * 1.1;
+    const gl = this.gl; const W = this.canvas.width, H = this.canvas.height; gl.viewport(0, 0, W, H);
+    const M = this.matriz(); const centro = this.proyectar(0, 0, 0); const rNuc = 0.12 * centro.s * this.dpr;
+    const cx = centro.x * this.dpr, cy = (this.h - centro.y) * this.dpr, tilt = Math.abs(Math.sin(this.pitch));
+    const quad = (pr) => { gl.useProgram(pr.p); gl.bindBuffer(gl.ARRAY_BUFFER, this.bQuad); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+      const u = pr.u; if (u.uRes) gl.uniform2f(u.uRes, W, H);
+      if (u.uJ) { const pj = this.proyectar(0, 1.6, 0); let jx = pj.x - centro.x, jy = -(pj.y - centro.y); const lj = Math.hypot(jx, jy) || 1; gl.uniform2f(u.uJ, jx / lj, jy / lj); gl.uniform1f(u.uJL, Math.max(1.5, lj * this.dpr / rNuc)); }
+      if (u.uNebK) { gl.uniform1f(u.uNebK, this.texNeb && !CL ? 0.55 + 0.6 * this.cfg.brillo : 0); if (this.texNeb) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.texNeb); gl.uniform1i(u.uNeb, 0); }
+        const k = this.base; gl.uniform3f(u.uDr, k.r[0], k.r[1], k.r[2]); gl.uniform3f(u.uDu, k.u[0], k.u[1], k.u[2]); gl.uniform3f(u.uDf, k.f[0], k.f[1], k.f[2]); gl.uniform2f(u.uTan, Math.tan(0.31) * this.w / this.h, Math.tan(0.31)); } gl.uniform2f(u.uC, cx, cy); gl.uniform1f(u.uR, rNuc); gl.uniform1f(u.uTilt, tilt); gl.uniform1f(u.uT, t); gl.uniform1f(u.uClaro, CL ? 1 : 0); gl.uniform1f(u.uB, B); gl.drawArrays(gl.TRIANGLES, 0, 3); };
+    gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND); quad(this.pFondo);
+    // Partículas
+    gl.enable(gl.BLEND); if (CL) gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); else gl.blendFunc(gl.ONE, gl.ONE);
+    const pg = this.pGal; gl.useProgram(pg.p); const u = pg.u;
+    gl.uniformMatrix4fv(u.uM, false, M); gl.uniform1f(u.uG, this.giro); gl.uniform1f(u.uT, this.reducido ? 0 : t); gl.uniform1f(u.uClaro, CL ? 1 : 0); gl.uniform1f(u.uB, B);
+    const focoN = this.foco ? (BRAZOS.indexOf(this.foco) >= 0 ? BRAZOS.indexOf(this.foco) : 5) : -1; gl.uniform1f(u.uFoco, focoN);
+    const atrib = (buf) => { gl.bindBuffer(gl.ARRAY_BUFFER, buf); [[this.aP, 3, 0], [this.aC, 4, 12], [this.aS, 2, 28]].forEach(([l, n, off]) => { gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, n, gl.FLOAT, false, 36, off); }); };
+    gl.uniform1f(u.uCielo, 1); gl.uniform1f(u.uFoco, -1); atrib(this.bCielo); gl.uniform1f(u.uPx, this.dpr * 0.95); gl.uniform1f(u.uEstrella, 0);
+    gl.drawArrays(gl.POINTS, 0, Math.floor(this.nCielo * (0.5 + 0.5 * this.calidad)));
+    if (!CL) { const pl = this.pLej; gl.useProgram(pl.p); gl.uniformMatrix4fv(pl.u.uM, false, M); gl.uniform1f(pl.u.uPx, this.dpr); gl.uniform1f(pl.u.uMaxPt, this.maxPt); gl.uniform1f(pl.u.uT, t); atrib(this.bLej); gl.drawArrays(gl.POINTS, 0, this.nLej); gl.useProgram(pg.p); }
+    gl.uniform1f(u.uCielo, 0); gl.uniform1f(u.uFoco, focoN);
+    atrib(this.bPolvo); gl.uniform1f(u.uPx, T * this.dpr * this.esc * 0.011 / Math.pow(this.zoom, 0.65)); gl.uniform1f(u.uEstrella, 0);
+    gl.drawArrays(gl.POINTS, 0, Math.floor(this.nPolvo * (0.45 + 0.55 * this.calidad)));
+    // Nubes de gas: pocas, grandes y muy suaves (dan el cuerpo luminoso de la galaxia)
+    if (!CL) { gl.blendFunc(gl.ZERO, gl.ONE_MINUS_SRC_ALPHA); atrib(this.bOscuro); gl.uniform1f(u.uPx, this.dpr * this.esc * 0.011 / Math.pow(this.zoom, 0.4)); gl.drawArrays(gl.POINTS, 0, this.nOscuro); gl.blendFunc(gl.ONE, gl.ONE); }
+    atrib(this.bNubes); gl.uniform1f(u.uPx, this.dpr * this.esc * 0.011 / Math.pow(this.zoom, 0.4)); gl.drawArrays(gl.POINTS, 0, this.nNubes);
+    // Notas (se recalculan cada cuadro: brillo, búsqueda, foco y la que está bajo el ratón)
+    const busca = sinAcentos(this.busca || ''); const cerca = this.sobre && this.vecinos ? this.vecinos.get(this.sobre) : null;
+    const B9 = this.bufNotas; let o = 0; let mejor = null, dmin = 15; this.proy = [];
+    for (const n of this.notas) {
+      const [x, y, z] = this.pos(n.r, n.ph0, n.y); const p = this.proyectar(x, y, z); this.proy.push([n, p]);
+      if (this.raton && p.w > 0) { const d = Math.hypot(p.x - this.raton.x, p.y - this.raton.y); if (d < dmin) { dmin = d; mejor = n; } }
+      const coincide = !busca || sinAcentos(n.f.basename).includes(busca);
+      const tono = TONO[n.reg] || TONO.nucleo; let a = 0.95, s = n.tam;
+      if (n.reg === 'diario') { const k = n.pct == null ? 0 : n.pct; a = 0.25 + 0.75 * k; s *= 0.85 + 0.5 * k; }
+      if (!coincide) a *= 0.12; else if (busca) { a = 1; s *= 1.5; }
+      if (this.foco) { const fx = BRAZOS.indexOf(this.foco) >= 0 ? this.foco : null; const dentro = fx ? n.reg === fx : BRAZOS.indexOf(n.reg) < 0; if (!dentro) a *= 0.15; }
+      if (this.sobre === n) { a = 1; s *= 1.7; } else if (cerca && cerca.has(n)) { a = Math.max(a, 0.9); s *= 1.25; }
+      B9[o++] = n.r; B9[o++] = n.ph0; B9[o++] = n.y; B9[o++] = tono[0]; B9[o++] = tono[1]; B9[o++] = tono[2]; B9[o++] = a; B9[o++] = s; B9[o++] = BRAZOS.indexOf(n.reg) >= 0 ? BRAZOS.indexOf(n.reg) : 5;
+    }
+    this.sobre = mejor || this.resaltar || null;
+    if (this.notas.length) { gl.bindBuffer(gl.ARRAY_BUFFER, this.bNotas); gl.bufferData(gl.ARRAY_BUFFER, B9, gl.DYNAMIC_DRAW); atrib(this.bNotas); gl.uniform1f(u.uPx, T * this.dpr * this.esc * 0.02 / Math.pow(this.zoom, 0.6)); gl.uniform1f(u.uEstrella, 1); gl.uniform1f(u.uFoco, -1); gl.drawArrays(gl.POINTS, 0, this.notas.length); }
+    // Núcleo: agujero negro con disco y anillo de luz (tapa lo que hay detrás)
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); quad(this.pNucleo);
+    this.dibujarCapa(t, dt, CL, B, centro);
+    this.capa.style.cursor = this.sobre || this.etiquetaSobre ? 'pointer' : 'grab'; this.canvas.style.cursor = this.capa.style.cursor;
+  }
+  // Capa 2D: enlaces, pulsos, nombres de los brazos, «HOY» y la ficha de la nota
+  dibujarCapa(t, dt, CL, B, centro) {
+    const g = this.ctx; g.setTransform(this.d2, 0, 0, this.d2, 0, 0); g.clearRect(0, 0, this.w, this.h);
+    const pos = new Map(this.proy || []);
+    // Vida: estrellas fugaces cruzando el cielo y estrellas que nacen en los brazos
+    if (!this.reducido && !CL) {
+      this.fugaces = this.fugaces || []; this.nacen = this.nacen || [];
+      if (Math.random() < dt / 5.5) { const a = Math.random() * Math.PI * 2; const v = 520 + Math.random() * 420; this.fugaces.push({ x: Math.random() * this.w, y: Math.random() * this.h * 0.7, vx: Math.cos(a) * v, vy: Math.abs(Math.sin(a)) * v * 0.5 + 60, t: 0, d: 0.7 + Math.random() * 0.5 }); }
+      if (Math.random() < dt * 1.4) { const k = Math.floor(Math.random() * 5); const r = 0.8 + Math.random() * 2.4; this.nacen.push({ r, ph: espiral(k, r) + (Math.random() - 0.5) * 0.12, t: 0, d: 1.6 + Math.random() * 1.2, c: Math.random() < 0.6 ? '255,150,205' : '160,190,255' }); }
+      g.globalCompositeOperation = 'lighter';
+      this.fugaces = this.fugaces.filter((f) => { f.t += dt; if (f.t > f.d) return false; f.x += f.vx * dt; f.y += f.vy * dt; const k = Math.sin(Math.PI * f.t / f.d);
+        const largo = 0.09; const gr = g.createLinearGradient(f.x, f.y, f.x - f.vx * largo, f.y - f.vy * largo); gr.addColorStop(0, `rgba(255,250,240,${0.85 * k})`); gr.addColorStop(1, 'rgba(255,250,240,0)');
+        g.globalAlpha = 1; g.strokeStyle = gr; g.lineWidth = 1.3; g.beginPath(); g.moveTo(f.x, f.y); g.lineTo(f.x - f.vx * largo, f.y - f.vy * largo); g.stroke(); return true; });
+      this.nacen = this.nacen.filter((n) => { n.t += dt; if (n.t > n.d) return false; const [x, y, z] = this.pos(n.r, n.ph, 0); const p = this.proyectar(x, y, z); if (p.w <= 0) return true;
+        const k = Math.sin(Math.PI * n.t / n.d); const rad = (4 + 14 * k) * Math.min(2, p.s / 120 + 0.6); const gr = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad);
+        gr.addColorStop(0, `rgba(255,255,255,${0.9 * k})`); gr.addColorStop(0.25, `rgba(${n.c},${0.45 * k})`); gr.addColorStop(1, `rgba(${n.c},0)`); g.globalAlpha = 1; g.fillStyle = gr; g.fillRect(p.x - rad, p.y - rad, rad * 2, rad * 2); return true; });
+      g.globalCompositeOperation = 'source-over';
+    }
+    const curva = (p, q, alfa, color, ancho) => { const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2; const kx = mx + (centro.x - mx) * 0.28, ky = my + (centro.y - my) * 0.28;
+      g.globalAlpha = alfa; g.strokeStyle = color; g.lineWidth = ancho; g.beginPath(); g.moveTo(p.x, p.y); g.quadraticCurveTo(kx, ky, q.x, q.y); g.stroke(); return [kx, ky]; };
+    g.lineCap = 'round';
+    if (this.cfg.fibras && this.enlaces.length) {
+      g.globalCompositeOperation = CL ? 'source-over' : 'lighter';
+            if (this.sobre && this.vecinos && this.vecinos.get(this.sobre)) { const p = pos.get(this.sobre); for (const v of this.vecinos.get(this.sobre)) { const q = pos.get(v); if (p && q) curva(p, q, 0.55, CL ? '#2b2420' : '#ffffff', 1.1); } }
+      // Pulsos: pequeñas luces que viajan por los enlaces, como pensamientos
+      if (!this.reducido && Math.random() < dt * 1.6 && this.enlaces.length) { const [a, b] = this.enlaces[Math.floor(Math.random() * this.enlaces.length)]; this.pulsos.push({ a, b, k: 0, v: 0.45 + Math.random() * 0.4 }); }
+      const vivos = [];
+      for (const pu of this.pulsos) {
+        pu.k += pu.v * dt; if (pu.k >= 1) continue; vivos.push(pu);
+        const p = pos.get(pu.a), q = pos.get(pu.b); if (!p || !q) continue;
+        const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2; const kx = mx + (centro.x - mx) * 0.28, ky = my + (centro.y - my) * 0.28; const k = pu.k, w = 1 - k;
+        const x = w * w * p.x + 2 * w * k * kx + k * k * q.x, y = w * w * p.y + 2 * w * k * ky + k * k * q.y; const tono = TONO[pu.a.reg] || TONO.nucleo;
+        const r = 7; const gr = g.createRadialGradient(x, y, 0, x, y, r); const c = CL ? '43,36,32' : `${tono[0] * 255 | 0},${tono[1] * 255 | 0},${tono[2] * 255 | 0}`;
+        gr.addColorStop(0, `rgba(${c},${0.9 * Math.sin(k * Math.PI)})`); gr.addColorStop(1, `rgba(${c},0)`); g.globalAlpha = 1; g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+      this.pulsos = vivos.slice(-40);
+    }
+    g.globalCompositeOperation = 'source-over'; this.etiquetaSobre = null;
+    if (this.cfg.etiquetas) {
+      g.font = '600 11px ' + FUENTE_SIS; g.textAlign = 'center'; g.textBaseline = 'middle'; if (g.letterSpacing !== undefined) g.letterSpacing = '0.2px';
+      BRAZOS.forEach((id, k) => {
+        const R = this.region(id); if (!R) return; const r = 3.55; const [x, y, z] = this.pos(r, espiral(k, r), 0); const p = this.proyectar(x, y, z); if (p.w <= 0) return;
+        const n = (this.cuenta && this.cuenta[id]) || 0; const txt = R.nombre + '  ' + n; const ancho = g.measureText(txt).width;
+        const encima = this.raton && Math.abs(this.raton.x - p.x) < ancho / 2 + 8 && Math.abs(this.raton.y - p.y) < 11; if (encima) this.etiquetaSobre = id;
+        const apagado = this.foco && this.foco !== id; const tono = TONO[id];
+        g.globalAlpha = apagado ? 0.22 : encima || this.foco === id ? 1 : 0.78; const col = CL ? `rgb(${tono[0] * 150 | 0},${tono[1] * 150 | 0},${tono[2] * 150 | 0})` : `rgb(${tono[0] * 255 | 0},${tono[1] * 255 | 0},${tono[2] * 255 | 0})`;
+        if (!CL) { g.shadowColor = 'rgba(0,0,0,0.95)'; g.shadowBlur = 10; }
+        g.fillStyle = col; g.beginPath(); g.arc(p.x - ancho / 2 - 9, p.y, 2.6, 0, 6.3); g.fill();
+        g.fillStyle = CL ? '#3b322b' : '#f3ece2'; g.fillText(txt, p.x, p.y); g.shadowBlur = 0;
+        if (encima || this.foco === id) { g.globalAlpha *= 0.5; g.fillRect(p.x - ancho / 2, p.y + 9, ancho, 1); }
+      });
+      // HOY, debajo del agujero negro
+      const rN = 0.12 * centro.s; g.globalAlpha = CL ? 0.75 : 0.85; g.fillStyle = CL ? '#3b322b' : '#fff7ea'; g.font = '600 10.5px ' + FUENTE_SIS; if (g.letterSpacing !== undefined) g.letterSpacing = '1.6px';
+      if (!CL) { g.shadowColor = 'rgba(0,0,0,0.9)'; g.shadowBlur = 8; }
+      g.fillText('HOY', centro.x, centro.y + Math.max(22, rN * 5.5 * Math.abs(Math.sin(this.pitch)) + 18)); g.shadowBlur = 0;
+      g.textAlign = 'start'; g.textBaseline = 'alphabetic'; if (g.letterSpacing !== undefined) g.letterSpacing = '0px';
+    }
+    if (this.sobre) { const p = (this.proy.find((x) => x[0] === this.sobre) || [])[1]; if (p) { const R = this.region(this.sobre.reg); const nv = this.vecinos && this.vecinos.get(this.sobre) ? this.vecinos.get(this.sobre).size : 0; this.etiqueta(p, this.sobre.f.basename, R.nombre + (this.sobre.pct != null ? ' · ' + Math.round(this.sobre.pct * 100) + ' % hecho' : '') + (nv ? ' · ' + nv + (nv === 1 ? ' enlace' : ' enlaces') : '')); } }
+    g.globalAlpha = 1;
+  }
+  etiqueta(p, titulo, sub) {
+    const g = this.ctx; g.font = '600 13px ' + FUENTE_SIS; const w1 = g.measureText(titulo).width; g.font = '11.5px ' + FUENTE_SIS; const w2 = g.measureText(sub).width;
+    const ancho = Math.max(w1, w2) + 26, x = limitar(p.x + 18, 8, this.w - ancho - 8), y = limitar(p.y - 50, 8, this.h - 54);
+    const CL = this.claro; g.globalAlpha = 1; g.fillStyle = CL ? 'rgba(252,249,244,0.94)' : 'rgba(22,20,30,0.78)'; g.strokeStyle = CL ? 'rgba(60,45,30,0.14)' : 'rgba(255,255,255,0.14)'; g.lineWidth = 1;
+    g.beginPath(); if (g.roundRect) g.roundRect(x, y, ancho, 44, 12); else g.rect(x, y, ancho, 44); g.fill(); g.stroke();
+    g.fillStyle = CL ? '#1f1b18' : '#f6efe4'; g.font = '600 13px ' + FUENTE_SIS; g.fillText(titulo, x + 13, y + 19);
+    g.fillStyle = CL ? '#7a7068' : '#a39b90'; g.font = '11.5px ' + FUENTE_SIS; g.fillText(sub, x + 13, y + 34);
+  }
+  destruir() { this.vivo = false; this.ro.disconnect(); try { const e = this.gl.getExtension('WEBGL_lose_context'); if (e) e.loseContext(); } catch (e) { /* nada */ } }
+}
+const colorReg = (id) => { const t = TONO[id] || TONO.nucleo; const k = esClaro() ? 0.6 : 1; return 'rgb(' + t.map((v) => Math.round(v * 255 * k)).join(',') + ')'; };
+function crearCerebro(raiz, app, opts) {
+  try { return new CerebroGalaxia(raiz, app, opts); } catch (e) { console.warn('ÓRBITA: cerebro en modo clásico', e); raiz.querySelectorAll('.orb-galaxia, .orb-galaxia-capa').forEach((x) => x.remove()); return new Cerebro(raiz, app, opts); }
+}
+
 class MapaView extends VistaBase {
   getViewType() { return V.mapa; } getDisplayText() { return 'Cerebro'; } getIcon() { return 'brain'; }
   async onOpen() {
@@ -1659,7 +2145,7 @@ class MapaView extends VistaBase {
   montar() {
     const raiz = this.contentEl; raiz.empty();
     const cfg = Object.assign({}, CEREBRO_BASE, this.plugin.ajustes.cerebro || {});
-    this.cerebro = new Cerebro(raiz, this.app, {
+    this.cerebro = crearCerebro(raiz, this.app, {
       cfg, alAbrir: (f) => this.app.workspace.getLeaf('tab').openFile(f),
       alDatos: () => this.paneles(), alFoco: () => this.regiones()
     });
@@ -1692,43 +2178,58 @@ class MapaView extends VistaBase {
       r.addEventListener('input', () => { this.cerebro.cfg[k] = Number(r.value); }); r.addEventListener('change', guardar);
     };
     sec('Movimiento'); interruptor('girar', 'Girar'); deslizador('velocidad', 'Velocidad');
-    sec('Aspecto'); deslizador('brillo', 'Brillo'); deslizador('tam', 'Tamaño de punto'); interruptor('fibras', 'Fibras'); interruptor('etiquetas', 'Nombres de región');
+    sec('Aspecto'); deslizador('brillo', 'Brillo'); deslizador('tam', 'Tamaño de las estrellas'); interruptor('fibras', 'Enlaces y pulsos'); interruptor('etiquetas', 'Nombres de las órbitas');
+    // Modo fondo: solo la galaxia, girando despacio (para dejarla de fondo). Esc o clic en «Salir» para volver
+    const fondo = der.createEl('button', { cls: 'orb-cb-vista-btn orb-cb-fondo-btn', text: 'Modo fondo' });
+    const salir = raiz.createEl('button', { cls: 'orb-cb-salir', text: 'Salir del modo fondo' });
+    const ponerFondo = (on) => { raiz.toggleClass('orb-cb-fondo', on); document.body.toggleClass('orb-fondo-activo', on); this.cerebro.fondo = on; if (on) { this.cerebro.zoomObj = 1.05; this.cerebro.foco = null; } };
+    fondo.addEventListener('click', () => ponerFondo(true)); salir.addEventListener('click', () => ponerFondo(false));
+    this.registerDomEvent(document, 'keydown', (e) => { if (e.key === 'Escape' && raiz.hasClass('orb-cb-fondo')) ponerFondo(false); });
+    this._quitarFondo = () => ponerFondo(false);
     this.dock();
-    const ay = raiz.createDiv({ cls: 'orb-mapa-ayuda', text: 'Arrastra para girar · rueda para acercar · clic en un punto para abrir la nota · doble clic para volver' });
+    const ay = raiz.createDiv({ cls: 'orb-mapa-ayuda', text: 'Arrastra para girar · rueda para acercar · clic en una estrella para abrir la nota · clic en el nombre de una órbita para destacarla' });
     ay.setAttr('aria-hidden', 'true');
   }
   paneles() { this.estadisticas(); this.actividad(); this.regiones(); }
   estadisticas() {
     const c = this.cerebro; if (!this.stats) return; this.stats.empty();
-    const l1 = this.stats.createDiv(); l1.createEl('b', { text: String(c.notas.length) }); l1.appendText(' notas · '); l1.createEl('b', { text: (c.palabras || 0).toLocaleString('es-ES') }); l1.appendText(' palabras');
     const hoyIni = new Date(); hoyIni.setHours(0, 0, 0, 0); const cambios = c.notas.filter((n) => n.mtime >= hoyIni.getTime()).length;
-    const l2 = this.stats.createDiv('orb-cb-vivo'); l2.createSpan('orb-cb-punto'); l2.appendText(cambios ? cambios + (cambios === 1 ? ' nota tocada hoy' : ' notas tocadas hoy') : 'Sin cambios hoy');
+    const fila = this.stats.createDiv('orb-cb-cifras');
+    [[c.notas.length, 'notas'], [(c.palabras || 0).toLocaleString('es-ES'), 'palabras'], [cambios, 'hoy']].forEach(([v, t]) => { const d = fila.createDiv('orb-cb-cifra'); d.createDiv({ cls: 'orb-cb-cifra-v', text: String(v) }); d.createDiv({ cls: 'orb-cb-cifra-t', text: t }); });
+    const ley = this.stats.createDiv('orb-cb-leyenda');
+    [['El centro', 'es hoy'], ['Cada brazo', 'es una órbita'], ['Cerca del centro', 'lo más reciente']].forEach(([a, b]) => { const l = ley.createDiv(); l.createEl('b', { text: a }); l.appendText(' ' + b); });
   }
   actividad() {
     const c = this.cerebro; if (!this.log) return; this.log.empty();
-    const cab = this.log.createDiv('orb-cb-log-cab'); cab.createSpan({ text: 'Actividad' }); const ahora = new Date(); cab.createSpan({ text: p2(ahora.getHours()) + ':' + p2(ahora.getMinutes()) });
-    const tipo = (n) => n.reg === 'diario' ? ['Día', 'dia'] : n.reg === 'equipo' ? ['Agente', 'agente'] : n.reg === 'nucleo' ? ['Núcleo', 'nucleo'] : ['Nota', 'nota'];
-    c.notas.slice().sort((a, b) => b.mtime - a.mtime).slice(0, 4).forEach((n) => {
-      const it = this.log.createDiv('orb-cb-item'); const fila = it.createDiv('orb-cb-item-f');
-      const [t, k] = tipo(n); fila.createSpan({ cls: 'orb-cb-tag ' + k, text: t });
-      const d = new Date(n.mtime); const mismoDia = d.toDateString() === ahora.toDateString();
-      fila.createSpan({ cls: 'orb-cb-hora', text: mismoDia ? p2(d.getHours()) + ':' + p2(d.getMinutes()) : p2(d.getDate()) + '/' + p2(d.getMonth() + 1) });
-      it.createDiv({ cls: 'orb-cb-nombre', text: n.f.basename });
+    const cab = this.log.createDiv('orb-cb-log-cab'); const v = cab.createSpan('orb-cb-vivo'); v.createSpan('orb-cb-punto'); v.appendText('Actividad'); cab.createSpan({ text: 'Últimos cambios' });
+    const hace = (ms) => { const m = Math.round((Date.now() - ms) / 60000); if (m < 1) return 'ahora'; if (m < 60) return m + ' min'; const h = Math.round(m / 60); if (h < 24) return h + ' h'; const d = Math.round(h / 24); return d === 1 ? 'ayer' : d + ' d'; };
+    const color = typeof colorReg === 'function' ? colorReg : () => '#ccc';
+    c.notas.slice().sort((a, b) => b.mtime - a.mtime).slice(0, 5).forEach((n) => {
+      const it = this.log.createDiv('orb-cb-item'); const pt = it.createSpan('orb-cb-pt'); pt.style.background = color(n.reg);
+      const tx = it.createDiv('orb-cb-item-tx'); tx.createDiv({ cls: 'orb-cb-nombre', text: n.f.basename.replace(/_/g, ' ') });
+      const R = c.region(n.reg); tx.createDiv({ cls: 'orb-cb-sub', text: R ? R.nombre : '' });
+      it.createSpan({ cls: 'orb-cb-hora', text: hace(n.mtime) });
       it.addEventListener('click', () => this.app.workspace.getLeaf('tab').openFile(n.f));
+      it.addEventListener('mouseenter', () => { c.resaltar = n; }); it.addEventListener('mouseleave', () => { c.resaltar = null; });
     });
   }
   regiones() {
     const c = this.cerebro; if (!this.regCaja || !c.cuenta) return; this.regCaja.empty();
-    const cab = this.regCaja.createDiv('orb-cb-log-cab'); cab.createSpan({ text: 'Regiones' }); cab.createSpan({ text: 'Notas' });
+    const cab = this.regCaja.createDiv('orb-cb-log-cab'); cab.createSpan({ text: 'Órbitas' }); cab.createSpan({ text: c.foco ? 'Toca otra vez para ver todo' : 'Toca para destacar' });
+    const color = typeof colorReg === 'function' ? colorReg : (id) => (c.region(id) || {}).color;
+    const max = Math.max(1, ...REGIONES.map((R) => c.cuenta[R.id] || 0));
     REGIONES.forEach((R) => {
+      const n = c.cuenta[R.id] || 0; const col = color(R.id);
       const f = this.regCaja.createEl('button', { cls: 'orb-cb-reg' + (c.foco === R.id ? ' activo' : '') + (c.foco && c.foco !== R.id ? ' apagado' : '') });
-      const pt = f.createSpan('orb-cb-pt'); pt.style.background = R.color; pt.style.boxShadow = '0 0 8px ' + R.color;
-      f.createSpan({ cls: 'orb-cb-reg-n', text: R.nombre }); f.createSpan({ cls: 'orb-cb-reg-c', text: String(c.cuenta[R.id] || 0) });
+      const pt = f.createSpan('orb-cb-pt'); pt.style.background = col; pt.style.color = col;
+      f.createSpan({ cls: 'orb-cb-reg-n', text: R.nombre });
+      const bar = f.createSpan('orb-cb-barra'); const b = bar.createSpan(); b.style.width = Math.max(4, Math.round(n / max * 100)) + '%'; b.style.background = col;
+      f.createSpan({ cls: 'orb-cb-reg-c', text: String(n) });
       f.addEventListener('click', () => { c.foco = c.foco === R.id ? null : R.id; this.regiones(); });
     });
   }
   async pintar() { /* el lienzo se pinta solo */ }
-  async onClose() { if (this.cerebro) this.cerebro.destruir(); }
+  async onClose() { if (this._quitarFondo) this._quitarFondo(); if (this.cerebro) this.cerebro.destruir(); }
 }
 
 
@@ -2159,7 +2660,7 @@ function respuestaEnVivo(app, agente, previos, texto, ctx) {
   const bin = claudeBin(); if (!bin) return Promise.reject(new Error('Claude Code no está instalado en este ordenador'));
   const { spawn } = require('child_process'); const cwd = app.vault.adapter.getBasePath();
   const prompt = ['Eres el ' + agente + ' ' + ctx.grupo + ' de ' + NOMBRE + '. Te escribe desde la pantalla ' + ctx.pantalla + ' de Obsidian, como en un chat.',
-    'Sigue CLAUDE.md. Para ahorrar, no leas nada si no hace falta para contestar; si hace falta, como mucho 2 archivos y solo la parte útil (la nota de hoy ORBITA/7_DIARIO/' + hoyISO() + '.md, tu ficha en ' + ctx.ficha + ' o ' + ctx.area + ').' + (ctx.permitir ? ' Puedes editar las notas que indican las reglas.' : ' No modifiques ningún archivo.') + ' No inventes datos.',
+    'Sigue CLAUDE.md. Para ahorrar, no leas nada si no hace falta para contestar; si hace falta, como mucho 2 archivos y solo la parte útil (la nota de hoy ORBITA/7_DIARIO/' + hoyISO() + '.md, tu ficha en ' + ctx.ficha + ' o ' + ctx.area + ').' + (ctx.permitir ? ' Puedes editar las notas que indican las reglas.' : ' Si te pide apuntar, cambiar o crear algo (una cita, una hora, una tarea, su entreno, una meta), HAZLO tú editando con Edit la nota que toque y respetando su formato: citas o eventos de un día concreto, una fila en la tabla de ORBITA/0_NUCLEO/CITAS.md (Fecha AAAA-MM-DD | Inicio HH:MM | Fin HH:MM | Qué | Detalle); algo que se repite cada semana, una fila en la tabla «Semana fija» de ORBITA/0_NUCLEO/CALENDARIO.md; una tarea de hoy, una línea «- [ ] …» en «Top 3» de la nota de hoy; metas en ORBITA/0_NUCLEO/METAS.md; entreno en ORBITA/2_CUERPO/ENTRENAMIENTO.md. Después dile en media frase qué has apuntado y dónde. Si falta un dato (día u hora), pregúntalo antes. Nunca borres archivos ni toques .obsidian.') + ' No inventes datos. Hoy es ' + DIAS[new Date().getDay()] + ' ' + hoyISO() + '.',
     previos ? 'Conversación reciente contigo:\n' + previos : '',
     ctx.reglas || '',
     'Mensaje nuevo de ' + NOMBRE + ': «' + texto + '»',
@@ -2167,7 +2668,7 @@ function respuestaEnVivo(app, agente, previos, texto, ctx) {
     'Contesta SOLO con tu respuesta, en español de España, de 1 a 4 frases, como un amigo franco por WhatsApp (tono de TRATO.md): si algo está mal o es una excusa, díselo claro y dile qué toca hacer; si está bien, celébralo. Con ánimo bajo, cercano y sin exigir. Sin firmar, sin títulos, sin listas ni markdown.'].filter(Boolean).join('\n\n');
   return new Promise((ok, mal) => {
     let out = '', err = '';
-    const p = spawn(bin, ['-p', '--model', 'sonnet', '--max-turns', '8', '--allowedTools', ctx.reglas ? 'Read,Glob,Grep,LS,WebFetch,WebSearch,Write,Edit' : 'Read,Glob,Grep,LS,WebFetch,WebSearch,Write', '--output-format', 'text'], { cwd, windowsHide: true, env: Object.assign({}, process.env) });
+    const p = spawn(bin, ['-p', '--model', 'sonnet', '--max-turns', '8', '--allowedTools', 'Read,Glob,Grep,LS,WebFetch,WebSearch,Write,Edit', '--output-format', 'text'], { cwd, windowsHide: true, env: Object.assign({}, process.env) });
     const t = setTimeout(() => { try { p.kill(); } catch (e) { /* */ } mal(new Error('Ha tardado demasiado')); }, 240000);
     p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { err += d; });
     p.on('error', (e) => { clearTimeout(t); mal(e); });
@@ -2208,7 +2709,7 @@ async function llamarAPI(sistema, mensaje, maxTokens) {
   throw new Error('No hay IA configurada');
 }
 // Guardado seguro: el modelo devuelve bloques <<<GUARDAR ruta>>> ... <<<FIN>>> y solo se escriben dentro de ORBITA/
-async function aplicarGuardados(app, txt, permitidas) {
+async function aplicarGuardados(app, txt, permitidas, completas) {
   const hechos = [];
   const limpio = String(txt).replace(/<<<GUARDAR\s+([^>\n]+)>>>\n?([\s\S]*?)<<<FIN>>>/g, (m0, ruta) => { hechos.push({ ruta: ruta.trim(), cont: m0.replace(/^<<<GUARDAR[^>]*>>>\n?/, '').replace(/<<<FIN>>>$/, '') }); return ''; }).trim();
   const escritos = [];
@@ -2216,7 +2717,9 @@ async function aplicarGuardados(app, txt, permitidas) {
     const ruta = h.ruta.replace(/^\/+/, '');
     if (!ruta.startsWith(RAIZ + '/') || ruta.includes('..') || !/\.md$/.test(ruta)) continue;
     if (permitidas && !permitidas.some((p) => ruta.startsWith(p))) continue;
+    if (!archivo(app, ruta) && ruta.startsWith(RAIZ + '/7_DIARIO/')) continue; // la nota del día la crea ÓRBITA con su plantilla
     const f = archivo(app, ruta);
+    if (f && completas && !completas.has(ruta)) continue; // solo se reescribe una nota que el modelo ha visto entera
     try {
       if (f) await app.vault.modify(f, h.cont.trim() + '\n');
       else { const dir = ruta.split('/').slice(0, -1).join('/'); if (dir && !app.vault.getAbstractFileByPath(dir)) await app.vault.createFolder(dir); await app.vault.create(ruta, h.cont.trim() + '\n'); }
@@ -2228,18 +2731,20 @@ async function aplicarGuardados(app, txt, permitidas) {
 async function respuestaAPI(app, agente, previos, texto, ctx) {
   const nf = quitarAcentos(agente).toUpperCase() + '.md'; const ficha = archivo(app, RAIZ + '/6_EQUIPO/' + nf) ? RAIZ + '/6_EQUIPO/' + nf : RAIZ + '/1_DINERO/contenido/equipo/' + nf;
   const notas = [['TRATO (cómo hablarle)', RAIZ + '/0_NUCLEO/TRATO.md', 1500], ['PERFIL', RAIZ + '/0_NUCLEO/PERFIL.md', 2500], ['TU FICHA', ficha, 2500],
-    ['METAS', RAIZ + '/0_NUCLEO/METAS.md', 2500], ['NOTA DE HOY', RAIZ + '/7_DIARIO/' + hoyISO() + '.md', 2500]].concat(ctx.extra || []);
-  let contexto = '';
-  for (const [t, r, mx] of notas) { const c = await leerCorto(app, r, mx); if (c) contexto += '\n\n=== ' + t + ' (' + r + ') ===\n' + c; }
-  const permitidas = (ctx.permitir || []).concat([ctx.adj + '/']);
-  const sistema = ['Eres el ' + agente + ' ' + ctx.grupo + ' de ' + NOMBRE + '. Te escribe desde la pantalla ' + ctx.pantalla + ' de Obsidian, como en un chat. No inventes datos: si algo no está en las notas, pregúntalo.',
+    ['METAS', RAIZ + '/0_NUCLEO/METAS.md', 6000], ['NOTA DE HOY', RAIZ + '/7_DIARIO/' + hoyISO() + '.md', 6000],
+    ['CITAS (eventos de un día concreto)', RAIZ + '/0_NUCLEO/CITAS.md', 6000], ['CALENDARIO (horario fijo semanal)', RAIZ + '/0_NUCLEO/CALENDARIO.md', 6000]].concat(ctx.extra || []);
+  let contexto = ''; const completas = new Set();
+  for (const [t, r, mx] of notas) { const full = await leer(app, r); if (!full) continue; const c = String(full).slice(0, mx); if (c.length === String(full).length) completas.add(r); contexto += '\n\n=== ' + t + ' (' + r + ')' + (completas.has(r) ? '' : ' [RECORTADA: no la reescribas]') + ' ===\n' + c; }
+  const permitidas = (ctx.permitir || [RAIZ + '/0_NUCLEO/CITAS.md', RAIZ + '/0_NUCLEO/CALENDARIO.md', RAIZ + '/0_NUCLEO/METAS.md', RAIZ + '/7_DIARIO/' + hoyISO() + '.md']).concat([ctx.adj + '/']);
+  const sistema = ['Eres el ' + agente + ' ' + ctx.grupo + ' de ' + NOMBRE + '. Te escribe desde la pantalla ' + ctx.pantalla + ' de Obsidian, como en un chat. Hoy es ' + DIAS[new Date().getDay()] + ' ' + hoyISO() + '. No inventes datos: si algo no está en las notas, pregúntalo.',
+    ctx.reglas ? '' : 'Si te pide apuntar o cambiar algo (una cita de un día concreto: fila en CITAS.md; algo que se repite cada semana: fila en «Semana fija» de CALENDARIO.md; una tarea de hoy: línea «- [ ] …» en «Top 3» de la nota de hoy; una meta: METAS.md), HAZLO guardando la nota completa con el bloque GUARDAR de abajo, respetando su formato, y dile en media frase qué has apuntado. Si falta el día o la hora, pregúntalo antes.',
     ctx.reglas || '',
     'Para guardar o actualizar una nota, añade AL FINAL de tu respuesta uno o varios bloques exactamente así (con la nota COMPLETA, no solo el cambio):\n<<<GUARDAR ruta/de/la/nota.md>>>\ncontenido\n<<<FIN>>>\nSolo puedes escribir en: ' + permitidas.join(', ') + '. Un texto largo que te pida (guion, plan, lista) guárdalo en ' + ctx.adj + '/ y menciónalo como [[ruta sin extensión]].',
     'Tu respuesta visible: en español de España, de 1 a 4 frases, como un amigo franco por WhatsApp (tono de TRATO): si algo está mal, díselo claro y dile qué toca; si está bien, celébralo. Con ánimo bajo, cercano y sin exigir. Sin firmar, sin títulos, sin listas ni markdown.',
     'Notas útiles:' + contexto].filter(Boolean).join('\n\n');
   const msg = (previos ? 'Conversación reciente contigo:\n' + previos + '\n\n' : '') + 'Mensaje nuevo de ' + NOMBRE + ': «' + texto + '»';
   const r = await llamarAPI(sistema, msg, ctx.reglas ? 2500 : 900);
-  const g = await aplicarGuardados(app, r, permitidas);
+  const g = await aplicarGuardados(app, r, permitidas, completas);
   return g.texto + (g.escritos.length ? ' (Guardado en ' + g.escritos.map((x) => '[[' + x.replace(/\.md$/, '') + ']]').join(', ') + ')' : '');
 }
 function quitarAcentos(s) { return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
