@@ -1,67 +1,111 @@
 # Manual de ÓRBITA
 
-## 1. Primeros pasos (10 minutos)
-1. **Abre la bóveda** en Obsidian y activa el plugin ÓRBITA (ver README).
-2. **Tu nombre:** Ajustes → ÓRBITA → Tu nombre.
-3. **Tu perfil:** abre `ORBITA/0_NUCLEO/PERFIL.md` y rellénalo. Es lo que el equipo sabe de ti.
-4. **Tu horario:** edita la tabla de `ORBITA/0_NUCLEO/CALENDARIO.md` con tu semana real.
-5. **Tus metas:** rellena `ORBITA/0_NUCLEO/METAS.md` (meta del año por órbita y las metas de este mes).
-6. **Tu entreno:** cambia `ORBITA/2_CUERPO/ENTRENAMIENTO.md`. Cada día de entreno es un encabezado `## Lunes · Rutina`.
-7. **Tu cuidado personal:** tabla «Plan del calendario» de `ORBITA/6_EQUIPO/SKINCARE.md` (productos, mañana/noche y frecuencia).
-8. **Tu formación:** `ORBITA/0_NUCLEO/FENIX.md` (los módulos de tu curso) y `ORBITA/3_MENTE/LIBRO.md` (tu libro).
-9. **Contraseña (opcional):** la primera vez que abras ÓRBITA te pide elegir una. Se puede quitar en Ajustes → ÓRBITA.
+## 1. Instalar (5 minutos)
 
-## 2. El día a día
-- **Hoy:** tu nota del día, ya preparada. Marca lo que haces. La rana va primero.
-- **Cierre (2 min):** pantalla Hoy → Cerrar el día. Qué hiciste y cómo estás.
-- **Equipo:** escribe a cualquier agente. Si no sabes a quién, al Director.
+**Windows**
+1. Descarga [ORBITA.zip](https://github.com/Fatalyy/ORBITA/archive/refs/heads/main.zip) y descomprímelo (clic derecho → *Extraer todo*).
+2. Doble clic en **`INSTALAR_WINDOWS.bat`**. Si Windows avisa («Windows protegió su PC»), pulsa *Más información → Ejecutar de todas formas*.
+3. El instalador:
+   - instala Obsidian si no lo tienes (gratis),
+   - copia tu bóveda a `Documentos\ORBITA` (si ya existe, no toca nada),
+   - abre Obsidian con ella.
+4. En Obsidian, pulsa **«Confiar en el autor y activar plugins»**.
+
+**Mac**
+1. Descarga y descomprime el zip.
+2. Clic derecho en **`INSTALAR_MAC.command`** → *Abrir* (la primera vez macOS lo pide así).
+3. Si no tienes Obsidian, descárgalo de [obsidian.md](https://obsidian.md) y vuelve a abrir el instalador.
+
+**A mano (cualquier sistema)**
+Copia la carpeta `vault` donde quieras y en Obsidian elige *Abrir carpeta como bóveda*. Luego *Ajustes → Plugins de la comunidad → Activar* y enciende **ÓRBITA**.
+
+## 2. La Bienvenida (3 minutos)
+
+Se abre sola la primera vez. Cinco pantallas:
+
+1. **Tu nombre.**
+2. **Tu IA** (ver punto 3).
+3. **Sobre ti:** edad, ciudad, a qué te dedicas, qué te cuesta y si quieres que el equipo sea suave, directo o exigente.
+4. **Tu semana:** a qué hora te levantas y te acuestas, días de gimnasio y tu horario de clase o trabajo.
+5. **Tus metas:** una por órbita para este año y hasta 3 para este mes.
+
+Al terminar, el **Director te escribe en el chat** y te hace unas preguntas cortas (semana tipo, entreno, cuidado personal, dinero, libro o curso). Con cada respuesta rellena tus notas. Cuando acaba, te avisa.
+
+Puedes repetirla cuando quieras: *Ajustes › ÓRBITA › Bienvenida*.
+
+## 3. Conectar la IA
+
+Elige una opción en la Bienvenida o en *Ajustes › ÓRBITA › Inteligencia artificial*.
+
+### A) Claude con tu cuenta (recomendado si pagas Claude Pro)
+Sin coste extra. Funciona en el ordenador.
+1. Abre **PowerShell** (Windows) o **Terminal** (Mac).
+2. Pega esto y pulsa Enter:
+   - Windows: `irm https://claude.ai/install.ps1 | iex`
+   - Mac/Linux: `curl -fsSL https://claude.ai/install.sh | bash`
+3. Escribe `claude`, pulsa Enter e inicia sesión con tu cuenta de Claude.
+4. En la Bienvenida, pulsa **Comprobar**. Debe salir «✓ Claude Code está instalado».
+
+*Consejo:* si en Claude Code ves «API Usage Billing», estás usando una clave de API y te cobrará aparte. Cierra sesión (`/logout`) y entra con tu cuenta.
+
+### B) Clave de API de Anthropic o de OpenAI
+Funciona en el ordenador **y en el móvil**. Pagas por uso; con 5 € tienes para mucho tiempo.
+1. Crea la clave:
+   - Anthropic: [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)
+   - OpenAI: [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+2. Añade saldo en esa misma web (*Billing*).
+3. Pega la clave en la Bienvenida y pulsa **Probar**.
+
+La clave se guarda solo en ese dispositivo (no va en tus notas ni se sincroniza). En el móvil tendrás que pegarla otra vez.
+Modelo por defecto: el más barato y rápido de cada marca. Puedes cambiarlo en Ajustes.
+
+### C) Sin IA
+Todo funciona (nota del día, avisos del equipo, metas, calendario) menos las respuestas del chat.
+
+## 4. El día a día
+
+- **Hoy:** marca lo que haces. La rana va primero.
+- **Cerrar el día (2 min):** pantalla Hoy → *Cerrar el día*.
+- **Equipo:** escribe a cualquier agente. Si no sabes a quién, al Director. Puedes adjuntar fotos con el clip 📎 o pegarlas.
 - **Domingo:** revisión de la semana y seguimiento de las metas del mes.
-- **Semana dura:** pon «modo tormenta» en el Estado general de `ESTADO_EQUIPO.md`; lo mínimo cuenta como cumplido.
+- **Semana dura:** pon «modo tormenta» en `ESTADO_EQUIPO.md`; lo mínimo cuenta como cumplido.
 
-## 3. El equipo
 | Agente | Para qué |
 |---|---|
-| Director | El jefe: coordina, plan del día y de la semana |
-| Mentor | Metas, disciplina, la rana, tu formación |
-| Estratega | Dinero, ahorro, trabajo y carrera |
+| Director | Coordina, plan del día y de la semana |
+| Mentor | Metas, disciplina, la rana y tu formación |
+| Estratega | Dinero, trabajo y carrera |
 | Entrenador | Gimnasio, técnica y progreso |
-| Skincare | Cuidado personal (piel, pelo) |
+| Skincare | Cuidado personal |
 | Coach | Ánimo, estrés, sueño y lo personal |
 
-Cómo te hablan se decide en `ORBITA/0_NUCLEO/TRATO.md`. Si los quieres más suaves o más exigentes, edítalo.
+El equipo te escribe solo si algo está sin marcar (levantarte, entreno, rana, formación, cierre…) y solo con Obsidian abierto. Esos avisos no gastan IA.
 
-**Mensajes del equipo durante el día** (solo si está sin marcar en tu nota): 10:30 levantarte, 12:00 cuidado de mañana, 13:30 entreno, 18:00 rana, 19:30 formación, 21:00 cómo estás, 22:15 cuidado de noche, 22:45 cierre, 23:30 lectura. Solo aparecen con Obsidian abierto.
+## 5. Móvil y sincronización
 
-## 4. Que el equipo conteste al momento (opcional, PC)
-1. Instala **Claude Code**: en Windows, abre PowerShell y ejecuta `irm https://claude.ai/install.ps1 | iex` (en Mac o Linux, sigue la [guía oficial](https://code.claude.com)).
-2. Escribe `claude` y elige **iniciar sesión con tu cuenta de Claude** (Pro o superior). No uses claves de API si no quieres pagar aparte.
-3. Comprueba que arriba pone tu plan y no «API Usage Billing».
-4. Listo: en la pantalla Equipo, escribe y pulsa Enter. El agente responde en unos segundos con el modelo Sonnet (el más económico) y **solo puede leer** tus notas.
+- **Obsidian Sync** (de pago, lo más fácil), o
+- **Remotely Save** (gratis) con Dropbox, OneDrive o similar: en sus ajustes, «sincronizar cada 1 minuto» y «al guardar».
+- En el móvil, el chat contesta al momento solo con clave de API. Con Claude Code, te contesta cuando abras el ordenador.
 
-*Consejo:* si tienes un `settings.json` de Claude Code con un proxy o una clave de API, quítalo o te cobrará por uso.
+## 6. Personalizar
 
-## 5. Chat en directo dentro de Obsidian (opcional, PC)
-Instala el plugin de la comunidad **Claudian**. Usa tu Claude Code. La bóveda trae un `CLAUDE.md` con las normas del equipo. En Ajustes → Claudian → Proveedores, activa Sonnet y Opus.
+Todo son notas normales en `ORBITA/`:
+- Horario: `0_NUCLEO/CALENDARIO.md` · Citas: `CITAS.md` · Metas: `METAS.md` · Perfil: `PERFIL.md`
+- Cómo te habla el equipo: `0_NUCLEO/TRATO.md`
+- Entreno: `2_CUERPO/ENTRENAMIENTO.md` · Cuidado personal: `6_EQUIPO/SKINCARE.md`
+- Formación (curso o libro): `0_NUCLEO/FENIX.md` y `3_MENTE/LIBRO.md`
+- Tema, sonidos, intro y contraseña: *Ajustes › ÓRBITA*
 
-## 6. Avisos al móvil con rutinas programadas (opcional, avanzado)
-En la app de Claude puedes crear tareas programadas que lean tu bóveda (con el PC encendido y la app de Claude enlazada a tu carpeta) y te manden un aviso al móvil. En `prompts/` tienes dos de ejemplo: **buenos días** (09:30) y **revisión de la noche** (23:15). Cambia las rutas por las tuyas.
+O, más fácil: díselo al Director en el chat.
 
-## 7. Sincronizar PC y móvil
-- **Obsidian Sync** (de pago, lo más sencillo), o
-- **Remotely Save** (gratis) con Dropbox: en sus ajustes, «sincronizar cada 1 minuto» y «sincronizar al guardar». Cada dispositivo sincroniza **solo con Obsidian abierto**.
-- ÓRBITA espera 1 minuto al abrir antes de crear la nota del día, para que primero llegue lo último.
+## 7. Problemas frecuentes
 
-## 8. Personalizar
-- **Horario:** `CALENDARIO.md`. **Citas:** `CITAS.md`. **Sesiones fijas:** `SESIONES.md`.
-- **Plantilla del día:** `ORBITA/8_PLANTILLAS/DIA.md`.
-- **Agentes:** sus fichas en `ORBITA/6_EQUIPO/` (lo que hacen, su mensaje y su registro).
-- **Tema claro/oscuro, sonidos, intro:** Ajustes → ÓRBITA.
+- **No sale la Bienvenida:** *Ajustes › ÓRBITA › Bienvenida › Abrir*, o paleta de comandos (Ctrl/Cmd+P) → «Bienvenida».
+- **No veo ÓRBITA:** *Ajustes → Plugins de la comunidad*: desactiva el modo restringido y enciende ÓRBITA.
+- **El chat no contesta:** mira *Ajustes › ÓRBITA › Inteligencia artificial*. Con Claude Code debe poner «✓ encontrado»; con clave, pulsa Probar en la Bienvenida.
+- **Error 401:** la clave está mal copiada. **Error 429 o «credit»:** falta saldo en la web de la API.
+- **No aparece la nota de hoy:** espera 1 minuto o pulsa «Crearla» en Hoy.
 
-## 9. Preguntas frecuentes
-- **No me aparece la nota de hoy:** espera 1 minuto tras abrir o pulsa «Crearla» en Hoy.
-- **El chat no contesta al momento:** ¿Claude Code está instalado y con sesión iniciada? Sin él, solo contestan las rutinas programadas.
-- **¿Gasta mucho?** Los mensajes automáticos y todas las pantallas son gratis. Solo gasta el chat con IA, y usa el modelo más económico.
+## 8. Actualizar ÓRBITA
 
-## 10. Limitaciones conocidas (versión 0.1)
-- Algunas pantallas de «Más» (Voz, Calma, Estudio de contenido) necesitan notas que la plantilla aún no trae; se irán añadiendo.
-- El chat al momento solo funciona en el ordenador.
+Descarga el zip nuevo y copia solo la carpeta `vault/.obsidian/plugins/orbita` encima de la tuya (`Documentos/ORBITA/.obsidian/plugins/orbita`). Tus notas no se tocan. ÓRBITA se recarga solo en 30 segundos.

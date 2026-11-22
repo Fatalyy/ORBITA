@@ -1,3 +1,13 @@
 # Cambios
+
+## 1.0.0 · 22-11-2026
+- **Bienvenida:** asistente de inicio (nombre, IA, sobre ti, tu semana y tus metas) que rellena perfil, metas y horario.
+- **Entrevista del Director:** al terminar, el Director te pregunta en el chat y termina de configurar tus notas.
+- **Elige tu IA:** Claude con tu cuenta (Claude Code), clave de API de Anthropic o de OpenAI (también en el móvil), o sin IA.
+- **Instaladores** de un clic para Windows y Mac.
+- **Estudio de contenido** (Más → Contenido) con su propio chat y calendario semanal.
+- Fotos, archivos y enlaces en los chats.
+- Manual nuevo, más corto y paso a paso.
+
 ## 0.1.0 · 21-11-2026
-Primera versión pública: plantilla de bóveda, plugin ÓRBITA (nota del día, oficina del equipo con chat, mensajes del equipo, metas del mes, calendario, móvil), manual y rutinas de ejemplo.
+Primera versión pública.

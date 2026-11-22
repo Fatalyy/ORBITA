@@ -1,0 +1,9 @@
+{
+  "id": "orbita",
+  "name": "ÓRBITA",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Tu vida organizada con un equipo de agentes de IA: nota del día, metas, calendario, entreno y chat con el equipo.",
+  "author": "ÓRBITA",
+  "isDesktopOnly": false
+}

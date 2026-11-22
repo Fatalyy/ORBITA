@@ -2,33 +2,39 @@
 
 **Tu vida organizada en Obsidian, con un equipo de agentes de IA que te acompaña cada día.**
 
-ÓRBITA es una plantilla de Obsidian con un plugin propio. Te prepara la nota de cada día, lleva tus metas por meses y semanas, y te da un equipo (Director, Mentor, Entrenador, Estratega, Skincare y Coach) con el que hablas por chat dentro de Obsidian. Además, el equipo te escribe durante el día para preguntarte si has hecho lo tuyo.
+Nota del día preparada, metas por meses, calendario, gimnasio, cuidado personal y un chat con tu equipo: Director, Mentor, Estratega, Entrenador, Skincare y Coach. Web: [fatalyy.github.io/ORBITA](https://fatalyy.github.io/ORBITA/) · Comunidad: [Discord](https://discord.gg/y8K3fKPMpN)
+
+## Instalar en 3 pasos
+
+1. **Descarga** ÓRBITA: [ORBITA.zip](https://github.com/Fatalyy/ORBITA/archive/refs/heads/main.zip) y descomprímelo.
+2. **Doble clic** en `INSTALAR_WINDOWS.bat` (en Mac: `INSTALAR_MAC.command`). Instala Obsidian si no lo tienes y crea tu bóveda en `Documentos/ORBITA`.
+3. En Obsidian, pulsa **«Confiar en el autor y activar plugins»**. Se abre la **Bienvenida**: tu nombre, tu IA, tu semana y tus metas. Después el Director te hace unas preguntas en el chat y lo deja todo a tu medida.
+
+¿Algo no va? Mira el [MANUAL](MANUAL.md): todo explicado paso a paso.
+
+## Qué IA puedo usar
+
+| Opción | Cuesta | Dónde funciona |
+|---|---|---|
+| **Claude con tu cuenta** (Claude Code) | Incluido en Claude Pro | Ordenador |
+| **Clave de API de Anthropic** | Pagas por uso (céntimos al día) | Ordenador y móvil |
+| **Clave de API de OpenAI** (ChatGPT) | Pagas por uso | Ordenador y móvil |
+| **Sin IA** | Gratis | Todo funciona menos las respuestas del chat |
+
+Se elige en la Bienvenida y se cambia cuando quieras en *Ajustes › ÓRBITA*.
 
 ## Qué trae
-- **Nota del día automática:** rana (lo más importante), rutinas, entreno y cuidado personal según el día de la semana, citas y cierre.
-- **La oficina:** pantalla Equipo con una mesa por agente, estado real y chat por agente (en el móvil, como WhatsApp).
-- **El equipo te escribe:** mensajes a lo largo del día solo si algo está sin marcar (levantarte, entreno, rana, formación, lectura, cierre…). No gastan IA.
-- **Respuestas al momento** en el PC, si tienes Claude Code instalado con tu cuenta de Claude.
-- **Metas:** plan maestro en 5 órbitas (dinero, cuerpo, mente, relaciones, estudios), metas del mes con seguimiento semanal.
-- **Calendario, progreso, formación** (tu curso o libro) y muchas pantallas más.
-- **Diseño:** oscuro o claro, animaciones suaves y contraseña opcional.
 
-## Instalación rápida
-1. Instala [Obsidian](https://obsidian.md) (gratis).
-2. Descarga orbita-publica-v0.1.zip (arriba en la lista de archivos o en Releases), descomprímelo y copia la carpeta vault donde quieras (por ejemplo, Documentos/ÓRBITA).
-3. En Obsidian: «Abrir carpeta como bóveda» y elige esa carpeta.
-4. Ajustes → Plugins de la comunidad → activa los plugins de la comunidad y enciende **ÓRBITA**.
-5. Ajustes → ÓRBITA → escribe **tu nombre**.
-
-Guía completa en **[MANUAL.md](MANUAL.md)**.
-
-## Requisitos
-- Obsidian 1.4 o superior (PC, Mac, iPhone o Android).
-- Opcional: [Claude Code](https://code.claude.com) en el ordenador para que el equipo conteste al momento.
-- Opcional: sincronización entre dispositivos (Obsidian Sync, o el plugin Remotely Save con Dropbox).
+- **Hoy:** tu nota del día con la rana (lo más importante), rutinas, entreno y cuidado personal según el día.
+- **Equipo:** una oficina con un chat por agente. Te escriben durante el día si algo sigue sin hacer.
+- **Metas:** plan del año en 5 órbitas (dinero, cuerpo, mente, relaciones y estudios) y metas del mes con seguimiento semanal.
+- **Calendario, Progreso, Gimnasio, Formación, Voz, Contenido** y más.
+- Puedes mandar **fotos, archivos y enlaces** en el chat.
 
 ## Privacidad
-Tus notas son archivos tuyos, en tu ordenador. ÓRBITA no envía nada a ningún sitio. Solo si activas Claude Code, las respuestas del chat se generan con tu cuenta de Claude.
+
+Tus notas son archivos tuyos, en tu ordenador. ÓRBITA no envía nada a ningún sitio salvo lo que escribes en el chat a la IA que tú elijas. Tu clave de API se guarda solo en tu dispositivo, fuera de las notas.
 
 ## Licencia
+
 MIT. Úsalo, cámbialo y compártelo.
