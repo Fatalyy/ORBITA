@@ -48,7 +48,15 @@ Sin coste extra. Funciona en el ordenador.
 
 *Consejo:* si en Claude Code ves «API Usage Billing», estás usando una clave de API y te cobrará aparte. Cierra sesión (`/logout`) y entra con tu cuenta.
 
-### B) Clave de API de Anthropic o de OpenAI
+### B) Google Gemini: GRATIS (si no pagas ningún plan)
+Funciona en el ordenador **y en el móvil**, sin pagar nada.
+1. Entra en [aistudio.google.com/apikey](https://aistudio.google.com/apikey) con tu cuenta de Google.
+2. Pulsa **Create API key** y cópiala (empieza por `AIza…`). No pide tarjeta.
+3. En la Bienvenida elige **Google Gemini (gratis)**, pégala y pulsa **Probar**.
+
+Tiene un límite de mensajes al día (de sobra para el uso normal). En el plan gratuito, Google puede usar lo que escribes para mejorar sus modelos: si no te gusta, usa Claude o una clave de pago.
+
+### C) Clave de API de Anthropic o de OpenAI
 Funciona en el ordenador **y en el móvil**. Pagas por uso; con 5 € tienes para mucho tiempo.
 1. Crea la clave:
    - Anthropic: [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)
@@ -59,7 +67,7 @@ Funciona en el ordenador **y en el móvil**. Pagas por uso; con 5 € tienes par
 La clave se guarda solo en ese dispositivo (no va en tus notas ni se sincroniza). En el móvil tendrás que pegarla otra vez.
 Modelo por defecto: el más barato y rápido de cada marca. Puedes cambiarlo en Ajustes.
 
-### C) Sin IA
+### D) Sin IA
 Todo funciona (nota del día, avisos del equipo, metas, calendario) menos las respuestas del chat.
 
 ## 4. Hablar con el equipo también desde la app de Claude (opcional)

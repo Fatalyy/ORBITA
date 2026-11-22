@@ -2660,10 +2660,19 @@ function claudeBin() {
   } catch (e) { /* */ }
   return null;
 }
+// Abre una ventana de terminal con Claude Code para iniciar sesión (sin tener que escribir nada)
+function abrirLoginClaude() {
+  const bin = claudeBin(); if (!bin) { aviso('No encuentro Claude Code en este ordenador.'); return; }
+  try { const { spawn } = require('child_process');
+    if (process.platform === 'win32') spawn('cmd.exe', ['/c', 'start', '"Claude"', '"' + bin + '"'], { shell: true, detached: true, windowsHide: false }).unref();
+    else if (process.platform === 'darwin') spawn('open', ['-a', 'Terminal', bin], { detached: true }).unref();
+    else spawn('x-terminal-emulator', ['-e', bin], { detached: true }).unref();
+  } catch (e) { aviso('No he podido abrir la ventana: ' + e.message); }
+}
 // Explica en cristiano por qué no ha contestado y cómo arreglarlo
 function motivoError(e) {
   const t = String((e && e.message) || e || '');
-  if (/login|log in|api key|authenticat|unauthori|401|credential|not logged/i.test(t)) return 'Claude Code no tiene la sesión iniciada. Abre PowerShell (o Terminal), escribe claude, pulsa Enter e inicia sesión con tu cuenta de Claude. Luego vuelve a escribirme.';
+  if (/login|log in|api key|authenticat|unauthori|401|credential|not logged/i.test(t)) return 'Claude Code no tiene la sesión iniciada (o tu plan de Claude no incluye Claude Code: hace falta Pro o superior). Ve a Ajustes › ÓRBITA › Bienvenida › Tu IA y pulsa «Iniciar sesión en Claude».';
   if (/ENOENT|EINVAL|no está instalado|not recognized/i.test(t)) return 'No encuentro Claude Code en este ordenador. Instálalo desde la Bienvenida (Ajustes › ÓRBITA › Bienvenida) y pulsa «Comprobar».';
   if (/demasiado|timeout/i.test(t)) return 'Ha tardado demasiado. Vuelve a intentarlo en un momento.';
   if (/credit|saldo|billing|429|quota|insufficient/i.test(t)) return 'Tu clave de API no tiene saldo o has llegado al límite. Revisa la web de tu proveedor.';
@@ -2672,7 +2681,7 @@ function motivoError(e) {
 }
 function respuestaEnVivo(app, agente, previos, texto, ctx) {
   ctx = ctx || { grupo: 'del equipo ÓRBITA', pantalla: 'Equipo', ficha: 'ORBITA/6_EQUIPO/', area: 'la nota de tu área', adj: RAIZ + '/6_EQUIPO/adjuntos' };
-  if (IA.modo === 'anthropic' || IA.modo === 'openai') return respuestaAPI(app, agente, previos, texto, ctx);
+  if (CON_CLAVE(IA.modo)) return respuestaAPI(app, agente, previos, texto, ctx);
   const bin = claudeBin(); if (!bin) return Promise.reject(new Error('Claude Code no está instalado en este ordenador'));
   const { spawn } = require('child_process'); const cwd = app.vault.adapter.getBasePath();
   const prompt = ['Eres el ' + agente + ' ' + ctx.grupo + ' de ' + NOMBRE + '. Te escribe desde la pantalla ' + ctx.pantalla + ' de Obsidian, como en un chat.',
@@ -2696,14 +2705,15 @@ function respuestaEnVivo(app, agente, previos, texto, ctx) {
 /* ---------- IA: Claude Code (tu cuenta de Claude), clave de Anthropic o clave de OpenAI ---------- */
 // IA se rellena con los ajustes al arrancar. La clave se guarda solo en este dispositivo (data.json del plugin), nunca en las notas.
 const IA = { modo: 'claude-code', clave: '', modelo: '' };
-const IA_MODELO_BASE = { anthropic: 'claude-haiku-4-5', openai: 'gpt-5-mini' };
+const IA_MODELO_BASE = { anthropic: 'claude-haiku-4-5', openai: 'gpt-5-mini', gemini: 'gemini-flash-latest' };
+const CON_CLAVE = (m) => m === 'anthropic' || m === 'openai' || m === 'gemini';
 function iaDisponible() {
-  if (IA.modo === 'anthropic' || IA.modo === 'openai') return !!IA.clave;
+  if (CON_CLAVE(IA.modo)) return !!IA.clave;
   if (IA.modo === 'ninguna') return false;
   return !!claudeBin();
 }
 function iaNombre() {
-  return { 'claude-code': 'Claude (tu cuenta, con Claude Code)', anthropic: 'Clave de API de Anthropic', openai: 'Clave de API de OpenAI', ninguna: 'Sin IA' }[IA.modo] || 'Sin IA';
+  return { 'claude-code': 'Claude (tu cuenta, con Claude Code)', anthropic: 'Clave de API de Anthropic', openai: 'Clave de API de OpenAI', gemini: 'Google Gemini (gratis)', ninguna: 'Sin IA' }[IA.modo] || 'Sin IA';
 }
 async function leerCorto(app, ruta, max) { const t = await leer(app, ruta); return t ? String(t).slice(0, max || 2500) : ''; }
 // Llamada directa a la API (funciona también en el móvil). Sin herramientas: le pasamos las notas útiles en el mensaje.
@@ -2722,6 +2732,14 @@ async function llamarAPI(sistema, mensaje, maxTokens) {
       body: JSON.stringify({ model: modelo, max_completion_tokens: (maxTokens || 1200) * 3, messages: [{ role: 'system', content: sistema }, { role: 'user', content: mensaje }] }) });
     if (r.status >= 400) throw new Error('OpenAI ' + r.status + ': ' + ((r.json && r.json.error && r.json.error.message) || 'error'));
     return ((r.json.choices || [])[0] || {}).message ? r.json.choices[0].message.content.trim() : '';
+  }
+  if (IA.modo === 'gemini') {
+    const pedir = (mod) => ob.requestUrl({ url: 'https://generativelanguage.googleapis.com/v1beta/models/' + mod + ':generateContent', method: 'POST', throw: false, contentType: 'application/json',
+      headers: { 'x-goog-api-key': IA.clave },
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: sistema }] }, contents: [{ role: 'user', parts: [{ text: mensaje }] }], generationConfig: { maxOutputTokens: (maxTokens || 1200) * 2 } }) });
+    let r = await pedir(modelo); if (r.status === 404 && !IA.modelo) r = await pedir('gemini-flash-lite-latest');
+    if (r.status >= 400) throw new Error('Gemini ' + r.status + ': ' + ((r.json && r.json.error && r.json.error.message) || 'error'));
+    const c = ((r.json.candidates || [])[0] || {}).content; return ((c && c.parts) || []).map((p) => p.text || '').join('').trim();
   }
   throw new Error('No hay IA configurada');
 }
@@ -2868,6 +2886,7 @@ class BienvenidaModal extends ob.Modal {
     el.createEl('p', { cls: 'orb-bv-sub', text: 'Es lo que hace que el equipo te conteste. Elige una. Puedes cambiarla cuando quieras en Ajustes › ÓRBITA.' });
     const ops = [['claude-code', 'Claude con tu cuenta (recomendado)', 'Si pagas Claude Pro. Sin coste extra. Solo en el ordenador.'],
       ['anthropic', 'Clave de API de Anthropic', 'Pagas por uso (céntimos al día). Funciona también en el móvil.'],
+      ['gemini', 'Google Gemini (gratis)', 'Sin pagar nada: solo una clave gratuita de Google. Funciona también en el móvil.'],
       ['openai', 'Clave de API de OpenAI (ChatGPT)', 'Pagas por uso. Funciona también en el móvil.'],
       ['ninguna', 'Ahora no', 'Todo funciona menos las respuestas del chat.']];
     const g = el.createDiv('orb-bv-ops');
@@ -2876,6 +2895,8 @@ class BienvenidaModal extends ob.Modal {
     if (IA.modo === 'claude-code') {
       const ok = !!claudeBin();
       det.createDiv({ cls: 'orb-bv-estado ' + (ok ? 'ok' : 'no'), text: ok ? '✓ Claude Code está instalado en este ordenador' : (ob.Platform.isMobile ? 'En el móvil no se puede: configúralo en el ordenador o usa una clave de API.' : 'Todavía no está instalado') });
+      if (ok) { const ini = det.createEl('button', { text: 'Iniciar sesión en Claude (se abre una ventana)' }); ini.onclick = () => abrirLoginClaude();
+        det.createDiv({ cls: 'orb-bv-sub', text: 'En la ventana negra, sigue los pasos para entrar con tu cuenta de Claude (Pro o superior). Cuando termine, ciérrala y pulsa «Probar que contesta».' }); }
       if (ok) { const pr = det.createEl('button', { text: 'Probar que contesta' }); const res = det.createDiv('orb-bv-estado'); res.setText('Pruébalo: comprueba también que tienes la sesión iniciada.');
         pr.onclick = async () => { res.className = 'orb-bv-estado'; res.setText('Probando… (unos segundos)');
           try { const r = await respuestaEnVivo(this.app, 'Director', '', 'Contesta solo con la palabra: listo', { grupo: 'del equipo ÓRBITA', pantalla: 'Bienvenida', ficha: 'ORBITA/6_EQUIPO/', area: '', adj: RAIZ + '/6_EQUIPO/adjuntos' }); res.setText('✓ Funciona: «' + r.slice(0, 40) + '»'); res.addClass('ok'); }
@@ -2889,10 +2910,11 @@ class BienvenidaModal extends ob.Modal {
         ol.createEl('li', { text: 'Vuelve aquí y pulsa «Comprobar».' });
         const b = det.createEl('button', { text: 'Comprobar' }); b.onclick = () => this.pintar();
       }
-    } else if (IA.modo === 'anthropic' || IA.modo === 'openai') {
-      const web = IA.modo === 'anthropic' ? 'https://console.anthropic.com/settings/keys' : 'https://platform.openai.com/api-keys';
-      const p = det.createEl('p'); p.appendText('1. Crea una clave en '); p.createEl('a', { text: web.replace('https://', ''), href: web }); p.appendText(' (necesitas añadir saldo, con 5 € sobra para empezar). 2. Pégala aquí:');
-      const i = det.createEl('input', { attr: { type: 'password', placeholder: IA.modo === 'anthropic' ? 'sk-ant-…' : 'sk-…' } }); i.value = IA.clave || '';
+    } else if (CON_CLAVE(IA.modo)) {
+      const web = { anthropic: 'https://console.anthropic.com/settings/keys', openai: 'https://platform.openai.com/api-keys', gemini: 'https://aistudio.google.com/apikey' }[IA.modo];
+      const p = det.createEl('p'); p.appendText('1. Crea una clave en '); p.createEl('a', { text: web.replace('https://', ''), href: web }); p.appendText(IA.modo === 'gemini' ? ' con tu cuenta de Google (pulsa «Create API key»; es gratis, sin tarjeta). 2. Pégala aquí:' : ' (necesitas añadir saldo, con 5 € sobra para empezar). 2. Pégala aquí:');
+      if (IA.modo === 'gemini') det.createDiv({ cls: 'orb-bv-sub', text: 'Ojo: en el plan gratuito, Google puede usar lo que escribes para mejorar sus modelos. Si te importa, usa Claude o una clave de pago.' });
+      const i = det.createEl('input', { attr: { type: 'password', placeholder: { anthropic: 'sk-ant-…', openai: 'sk-…', gemini: 'AIza…' }[IA.modo] } }); i.value = IA.clave || '';
       i.addEventListener('change', async () => { IA.clave = i.value.trim(); this.plugin.ajustes.iaClave = IA.clave; await this.plugin.guardar(); });
       det.createDiv({ cls: 'orb-bv-sub', text: 'Se guarda solo en este dispositivo, fuera de tus notas. Nunca se sube a ningún sitio.' });
       const b = det.createEl('button', { text: 'Probar' }); const res = det.createDiv('orb-bv-estado');
@@ -3912,8 +3934,8 @@ class Ajustes extends ob.PluginSettingTab {
       .addToggle((t) => t.setValue(this.plugin.ajustes.autoActualizar !== false).onChange(async (v) => { this.plugin.ajustes.autoActualizar = v; await this.plugin.guardar(); }))
       .addButton((b) => b.setButtonText('Buscar ahora').onClick(() => buscarActualizacion(this.plugin, true)));
     c.createEl('h3', { text: 'Inteligencia artificial' });
-    new ob.Setting(c).setName('Con qué contesta el equipo').setDesc('Claude con tu cuenta (Claude Code, solo ordenador) o una clave de API (ordenador y móvil).').addDropdown((dd) => dd.addOptions({ 'claude-code': 'Claude con tu cuenta (Claude Code)', anthropic: 'Clave de API de Anthropic', openai: 'Clave de API de OpenAI', ninguna: 'Sin IA' }).setValue(IA.modo).onChange(async (v) => { IA.modo = v; this.plugin.ajustes.ia = v; await this.plugin.guardar(); this.display(); }));
-    if (IA.modo === 'anthropic' || IA.modo === 'openai') {
+    new ob.Setting(c).setName('Con qué contesta el equipo').setDesc('Claude con tu cuenta (Claude Code, solo ordenador) o una clave de API (ordenador y móvil).').addDropdown((dd) => dd.addOptions({ 'claude-code': 'Claude con tu cuenta (Claude Code)', gemini: 'Google Gemini (gratis)', anthropic: 'Clave de API de Anthropic', openai: 'Clave de API de OpenAI', ninguna: 'Sin IA' }).setValue(IA.modo).onChange(async (v) => { IA.modo = v; this.plugin.ajustes.ia = v; await this.plugin.guardar(); this.display(); }));
+    if (CON_CLAVE(IA.modo)) {
       new ob.Setting(c).setName('Clave de API').setDesc('Se guarda solo en este dispositivo (no va en tus notas ni se sincroniza con GitHub).').addText((tx) => { tx.inputEl.type = 'password'; tx.setValue(IA.clave).onChange(async (v) => { IA.clave = v.trim(); this.plugin.ajustes.iaClave = IA.clave; await this.plugin.guardar(); }); });
       new ob.Setting(c).setName('Modelo').setDesc('Vacío = ' + IA_MODELO_BASE[IA.modo] + ' (barato y rápido).').addText((tx) => tx.setPlaceholder(IA_MODELO_BASE[IA.modo]).setValue(IA.modelo).onChange(async (v) => { IA.modelo = v.trim(); this.plugin.ajustes.iaModelo = IA.modelo; await this.plugin.guardar(); }));
     } else if (IA.modo === 'claude-code') new ob.Setting(c).setName('Estado').setDesc(claudeBin() ? '✓ Claude Code encontrado en este ordenador.' : 'No encuentro Claude Code. Abre la Bienvenida para ver cómo instalarlo.');

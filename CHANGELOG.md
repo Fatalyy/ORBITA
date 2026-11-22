@@ -1,5 +1,11 @@
 # Cambios
 
+## 1.2.0 · 22-11-2026
+- **Gratis sin plan de pago:** nueva opción Google Gemini con una clave gratuita de Google (ordenador y móvil).
+
+## 1.1.1 · 22-11-2026
+- Botón «Iniciar sesión en Claude» en la Bienvenida: abre la ventana de Claude Code sin escribir nada.
+
 ## 1.1.0 · 22-11-2026
 - **El equipo ya viene configurado para Claude:** instrucciones (`CLAUDE.md`) y skills de los 7 agentes en `.claude/skills/`. Claude Code los usa solo, desde Obsidian o desde la pestaña Code de la app de Claude.
 - **Proyecto en la app de Claude:** instrucciones, constitución, skills de los 7 agentes y rutinas listas para copiar (carpeta `.claude-proyecto`).

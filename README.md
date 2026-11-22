@@ -21,6 +21,7 @@ Opcional: crea tu proyecto **ÓRBITA** en la app de Claude con las instrucciones
 | Opción | Cuesta | Dónde funciona |
 |---|---|---|
 | **Claude con tu cuenta** (Claude Code) | Incluido en Claude Pro | Ordenador |
+| **Google Gemini** | **Gratis** (clave gratuita de Google, sin tarjeta) | Ordenador y móvil |
 | **Clave de API de Anthropic** | Pagas por uso (céntimos al día) | Ordenador y móvil |
 | **Clave de API de OpenAI** (ChatGPT) | Pagas por uso | Ordenador y móvil |
 | **Sin IA** | Gratis | Todo funciona menos las respuestas del chat |
