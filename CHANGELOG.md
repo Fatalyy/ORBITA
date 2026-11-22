@@ -1,5 +1,8 @@
 # Cambios
 
+## 1.2.2 · 22-11-2026
+- Gemini: pregunta a Google qué modelos tiene disponibles tu clave y usa el primero que esté libre.
+
 ## 1.2.1 · 22-11-2026
 - Gemini: si un modelo está saturado, prueba otro y reintenta solo.
 

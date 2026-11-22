@@ -2739,9 +2739,17 @@ async function llamarAPI(sistema, mensaje, maxTokens) {
       headers: { 'x-goog-api-key': IA.clave },
       body: JSON.stringify({ systemInstruction: { parts: [{ text: sistema }] }, contents: [{ role: 'user', parts: [{ text: mensaje }] }], generationConfig: { maxOutputTokens: (maxTokens || 1200) * 2 } }) });
     // Si un modelo está saturado (503/429) o no existe (404), prueba otro y reintenta con una pequeña espera
-    const cola = IA.modelo ? [modelo, modelo] : ['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-flash-lite-latest'];
+    let cola = IA.modelo ? [modelo, modelo] : ['gemini-flash-latest', 'gemini-flash-lite-latest'];
+    // Además, los modelos «flash» que tu clave tiene disponibles de verdad (se piden a Google una vez y se guardan)
+    if (!IA.modelo) {
+      if (!IA.geminiLista) { try { const lm = await ob.requestUrl({ url: 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', headers: { 'x-goog-api-key': IA.clave }, throw: false });
+        IA.geminiLista = ((lm.json && lm.json.models) || []).filter((m) => (m.supportedGenerationMethods || []).includes('generateContent') && /flash/i.test(m.name) && !/image|tts|audio|live|thinking|exp|preview/i.test(m.name)).map((m) => m.name.replace(/^models\//, ''))
+          .sort((x, y) => (/lite/.test(y) ? 1 : 0) - (/lite/.test(x) ? 1 : 0) || y.localeCompare(x)); } catch (e) { IA.geminiLista = []; } }
+      cola = cola.concat(IA.geminiLista.filter((m) => !cola.includes(m)).slice(0, 5));
+      cola = cola.concat(cola.slice(0, 2));
+    }
     let r = null;
-    for (let i = 0; i < cola.length; i++) { r = await pedir(cola[i]); if (![404, 429, 500, 503].includes(r.status)) break; await new Promise((ok) => setTimeout(ok, 700 * (i + 1))); }
+    for (let i = 0; i < cola.length; i++) { r = await pedir(cola[i]); if (![404, 429, 500, 503].includes(r.status)) break; await new Promise((ok) => setTimeout(ok, 600 + 400 * i)); }
     if (r.status >= 400) throw new Error('Gemini ' + r.status + ': ' + ((r.json && r.json.error && r.json.error.message) || 'error'));
     const c = ((r.json.candidates || [])[0] || {}).content; return ((c && c.parts) || []).map((p) => p.text || '').join('').trim();
   }
