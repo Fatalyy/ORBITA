@@ -2817,13 +2817,16 @@ async function buscarActualizacion(plugin, manual) {
   try {
     const r = await ob.requestUrl({ url: REPO_RAW + 'manifest.json?t=' + Date.now(), throw: false });
     if (r.status !== 200) { if (manual) aviso('No he podido comprobar las actualizaciones ahora.'); return; }
-    const remoto = JSON.parse(r.text); const actual = plugin.manifest.version;
+    const remoto = JSON.parse(r.text); let actual = plugin.manifest.version;
+    try { actual = JSON.parse(await plugin.app.vault.adapter.read(plugin.manifest.dir + '/manifest.json')).version || actual; } catch (e) { /* usa la de memoria */ }
     if (verNum(remoto.version) <= verNum(actual)) { if (manual) aviso('Tienes la última versión de ÓRBITA (' + actual + ').'); return; }
     const [js, css] = await Promise.all([ob.requestUrl({ url: REPO_RAW + 'main.js?t=' + Date.now(), throw: false }), ob.requestUrl({ url: REPO_RAW + 'styles.css?t=' + Date.now(), throw: false })]);
     if (js.status !== 200 || css.status !== 200 || js.text.length < 100000 || !/module\.exports/.test(js.text)) { if (manual) aviso('La descarga de la actualización ha fallado. Prueba más tarde.'); return; }
     const ad = plugin.app.vault.adapter; const dir = plugin.manifest.dir;
+    if (plugin._actualizando) return; plugin._actualizando = true;
     try { await ad.write(dir + '/main.js.anterior', await ad.read(dir + '/main.js')); } catch (e) { /* copia de seguridad opcional */ }
     await ad.write(dir + '/styles.css', css.text); await ad.write(dir + '/main.js', js.text); await ad.write(dir + '/manifest.json', r.text);
+    plugin.manifest.version = remoto.version; plugin.ajustes.versionInstalada = remoto.version; await plugin.guardar();
     new ob.Notice('ÓRBITA se ha actualizado a la versión ' + remoto.version + '. Se recarga sola en unos segundos.', 8000);
   } catch (e) { console.warn('ÓRBITA actualizar', e); if (manual) aviso('No he podido actualizar: ' + e.message); }
 }
@@ -2831,7 +2834,7 @@ async function buscarActualizacion(plugin, manual) {
 class BienvenidaModal extends ob.Modal {
   constructor(app, plugin) { super(app); this.plugin = plugin; this.paso = 0; this.d = { nombre: plugin.ajustes.nombre || '', edad: '', ciudad: '', dedico: '', cuesta: '', trato: 'directo', levantar: '08:00', dormir: '23:30', gymDias: ['L', 'X', 'V'], gymHora: '18:00', ocupDias: 'L-V', ocupIni: '09:00', ocupFin: '14:00', ocupQue: 'Clase o trabajo', metas: { dinero: '', cuerpo: '', mente: '', relaciones: '', estudios: '' }, mes: ['', '', ''] }; }
   onOpen() { this.modalEl.addClass('orb-bv'); this.pintar(); }
-  onClose() { this.contentEl.empty(); }
+  onClose() { this.contentEl.empty(); if (!this.plugin.ajustes.bienvenidaVista) { this.plugin.ajustes.bienvenidaVista = true; this.plugin.guardar(); } }
   campo(el, etq, valor, alCambiar, opts) {
     const f = el.createDiv('orb-bv-campo'); f.createEl('label', { text: etq });
     const i = f.createEl(opts && opts.area ? 'textarea' : 'input', { attr: Object.assign({ type: (opts && opts.tipo) || 'text', placeholder: (opts && opts.ph) || '' }, opts && opts.area ? { rows: 2 } : {}) });
@@ -4058,7 +4061,7 @@ module.exports = class OrbitaPlugin extends ob.Plugin {
       // Cada vez que se abre Obsidian: intro «liquid» y, si está activado, la contraseña
       const recarga = window.__orbitaRecarga && Date.now() - window.__orbitaRecarga < 60000;
       let reciente = false; try { reciente = Date.now() - Number(window.localStorage.getItem('orbita-desbloqueo') || 0) < 12 * 3600 * 1000; } catch (e) { /* */ }
-      if (!this.ajustes.bienvenida) { quitarPortada(); setTimeout(() => new BienvenidaModal(this.app, this).open(), 600); }
+      if (!this.ajustes.bienvenida && !this.ajustes.bienvenidaVista && !recarga) { quitarPortada(); setTimeout(() => new BienvenidaModal(this.app, this).open(), 600); }
       else if (recarga || reciente) quitarPortada();
       else if (this.ajustes.intro || this.ajustes.bloqueo) introApple(this, this.ajustes.bloqueo !== false); else quitarPortada();
       // Se actualiza solo: si cambia el plugin (por la sincronización), se recarga sin reiniciar Obsidian

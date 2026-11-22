@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.2.3 · 22-11-2026
+- Arreglado: la actualización automática se repetía cada pocos minutos y reiniciaba ÓRBITA.
+- Arreglado: la Bienvenida volvía a salir sola después de cada recarga. Ahora sale una vez (luego está en Ajustes › ÓRBITA).
+
 ## 1.2.2 · 22-11-2026
 - Gemini: pregunta a Google qué modelos tiene disponibles tu clave y usa el primero que esté libre.
 
