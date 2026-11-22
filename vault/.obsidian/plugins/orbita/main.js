@@ -2278,6 +2278,9 @@ class BienvenidaModal extends ob.Modal {
       cuerpo.createEl('h2', { text: 'Bienvenido a ÓRBITA' });
       cuerpo.createEl('p', { text: 'En 3 minutos lo dejamos listo. Luego el Director te hace unas preguntas en el chat y termina de configurarlo todo por ti.' });
       const i = this.campo(cuerpo, '¿Cómo te llamas?', d.nombre, (v) => { d.nombre = v; }, { ph: 'Tu nombre' }); setTimeout(() => i.focus(), 50);
+      const ft = cuerpo.createDiv('orb-bv-campo'); ft.createEl('label', { text: 'Aspecto' });
+      const gt = ft.createDiv('orb-bv-chips'); const osc = this.plugin.ajustes.tema === 'oscuro';
+      [['crema', '☀️ Claro', !osc], ['oscuro', '🌙 Oscuro', osc]].forEach(([k, t, on]) => { const b = gt.createEl('button', { cls: 'orb-bv-chip' + (on ? ' on' : ''), text: t }); b.onclick = async () => { d.nombre = i.value; if ((this.plugin.ajustes.tema === 'oscuro') !== (k === 'oscuro')) await this.plugin.alternarTema(); this.pintar(); }; });
     } else if (this.paso === 1) this.pasoIA(cuerpo);
     else if (this.paso === 2) {
       cuerpo.createEl('h2', { text: 'Sobre ti' }); cuerpo.createEl('p', { cls: 'orb-bv-sub', text: 'Todo se queda en tus notas, en tu ordenador. Puedes dejar cosas en blanco.' });
@@ -3369,6 +3372,7 @@ class Ajustes extends ob.PluginSettingTab {
       new ob.Setting(c).setName('Modelo').setDesc('Vacío = ' + IA_MODELO_BASE[IA.modo] + ' (barato y rápido).').addText((tx) => tx.setPlaceholder(IA_MODELO_BASE[IA.modo]).setValue(IA.modelo).onChange(async (v) => { IA.modelo = v.trim(); this.plugin.ajustes.iaModelo = IA.modelo; await this.plugin.guardar(); }));
     } else if (IA.modo === 'claude-code') new ob.Setting(c).setName('Estado').setDesc(claudeBin() ? '✓ Claude Code encontrado en este ordenador.' : 'No encuentro Claude Code. Abre la Bienvenida para ver cómo instalarlo.');
     c.createEl('h3', { text: 'Aspecto y seguridad' });
+    new ob.Setting(c).setName('Tema').setDesc('Claro (crema) u oscuro.').addDropdown((dd) => dd.addOptions({ crema: 'Claro', oscuro: 'Oscuro' }).setValue(this.plugin.ajustes.tema === 'oscuro' ? 'oscuro' : 'crema').onChange(async (v) => { if ((this.plugin.ajustes.tema === 'oscuro') !== (v === 'oscuro')) await this.plugin.alternarTema(); }));
     const s = (nombre, desc, clave, alCambiar) => new ob.Setting(c).setName(nombre).setDesc(desc).addToggle((t) => t.setValue(!!this.plugin.ajustes[clave]).onChange(async (v) => { this.plugin.ajustes[clave] = v; await this.plugin.guardar(); if (alCambiar) alCambiar(v); }));
     s('Intro al abrir Obsidian', 'La esfera de cristal, las órbitas y tu saludo.', 'intro');
     s('Pedir contraseña al abrir', 'Pantalla de bloqueo después de la intro. Solo bloquea la vista: las notas siguen siendo archivos normales.', 'bloqueo');
@@ -3614,6 +3618,7 @@ module.exports = class OrbitaPlugin extends ob.Plugin {
   }
   async alternarTema() {
     this.ajustes.tema = this.ajustes.tema === 'oscuro' ? 'crema' : 'oscuro'; document.body.toggleClass('orbita-crema', this.ajustes.tema !== 'oscuro'); await this.guardar();
+    try { this.app.changeTheme(this.ajustes.tema === 'oscuro' ? 'obsidian' : 'moonstone'); } catch (e) { /* API interna de Obsidian: si no existe, solo cambia ÓRBITA */ }
     try { window.localStorage.setItem('orbita-tema', this.ajustes.tema); } catch (e) { /* nada */ }
     document.querySelectorAll('.orb-sup-btn').forEach((b) => { b.empty(); ob.setIcon(b, this.ajustes.tema === 'oscuro' ? 'sun' : 'moon'); });
     if (SON && SON.clic) SON.clic();

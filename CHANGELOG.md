@@ -3,7 +3,7 @@
 ## 1.0.0 · 22-11-2026
 - **Proyecto en la app de Claude:** instrucciones, constitución, skills de los 7 agentes y rutinas listas para copiar (carpeta `.claude-proyecto`).
 - Arreglado: el instalador de Windows rompía la lista de bóvedas de Obsidian.
-- **Bienvenida:** asistente de inicio (nombre, IA, sobre ti, tu semana y tus metas) que rellena perfil, metas y horario.
+- **Bienvenida:** asistente de inicio (nombre, tema claro u oscuro, IA, sobre ti, tu semana y tus metas) que rellena perfil, metas y horario.
 - **Entrevista del Director:** al terminar, el Director te pregunta en el chat y termina de configurar tus notas.
 - **Elige tu IA:** Claude con tu cuenta (Claude Code), clave de API de Anthropic o de OpenAI (también en el móvil), o sin IA.
 - **Instaladores** de un clic para Windows y Mac.
