@@ -1,5 +1,8 @@
 # Cambios
 
+## 1.2.1 · 22-11-2026
+- Gemini: si un modelo está saturado, prueba otro y reintenta solo.
+
 ## 1.2.0 · 22-11-2026
 - **Gratis sin plan de pago:** nueva opción Google Gemini con una clave gratuita de Google (ordenador y móvil).
 

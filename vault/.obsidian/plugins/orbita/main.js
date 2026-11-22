@@ -2676,6 +2676,7 @@ function motivoError(e) {
   if (/ENOENT|EINVAL|no está instalado|not recognized/i.test(t)) return 'No encuentro Claude Code en este ordenador. Instálalo desde la Bienvenida (Ajustes › ÓRBITA › Bienvenida) y pulsa «Comprobar».';
   if (/demasiado|timeout/i.test(t)) return 'Ha tardado demasiado. Vuelve a intentarlo en un momento.';
   if (/credit|saldo|billing|429|quota|insufficient/i.test(t)) return 'Tu clave de API no tiene saldo o has llegado al límite. Revisa la web de tu proveedor.';
+  if (/503|high demand|overloaded|unavailable/i.test(t)) return 'El servidor de la IA está saturado ahora mismo (le pasa a Google a ratos). Espera un minuto y vuelve a probar.';
   if (/usage limit|limit reached|rate/i.test(t)) return 'Has llegado al límite de uso de tu plan de Claude por ahora. Prueba más tarde.';
   return 'No he podido contestar: ' + t.slice(0, 160);
 }
@@ -2737,7 +2738,10 @@ async function llamarAPI(sistema, mensaje, maxTokens) {
     const pedir = (mod) => ob.requestUrl({ url: 'https://generativelanguage.googleapis.com/v1beta/models/' + mod + ':generateContent', method: 'POST', throw: false, contentType: 'application/json',
       headers: { 'x-goog-api-key': IA.clave },
       body: JSON.stringify({ systemInstruction: { parts: [{ text: sistema }] }, contents: [{ role: 'user', parts: [{ text: mensaje }] }], generationConfig: { maxOutputTokens: (maxTokens || 1200) * 2 } }) });
-    let r = await pedir(modelo); if (r.status === 404 && !IA.modelo) r = await pedir('gemini-flash-lite-latest');
+    // Si un modelo está saturado (503/429) o no existe (404), prueba otro y reintenta con una pequeña espera
+    const cola = IA.modelo ? [modelo, modelo] : ['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-flash-lite-latest'];
+    let r = null;
+    for (let i = 0; i < cola.length; i++) { r = await pedir(cola[i]); if (![404, 429, 500, 503].includes(r.status)) break; await new Promise((ok) => setTimeout(ok, 700 * (i + 1))); }
     if (r.status >= 400) throw new Error('Gemini ' + r.status + ': ' + ((r.json && r.json.error && r.json.error.message) || 'error'));
     const c = ((r.json.candidates || [])[0] || {}).content; return ((c && c.parts) || []).map((p) => p.text || '').join('').trim();
   }
@@ -2919,7 +2923,7 @@ class BienvenidaModal extends ob.Modal {
       det.createDiv({ cls: 'orb-bv-sub', text: 'Se guarda solo en este dispositivo, fuera de tus notas. Nunca se sube a ningún sitio.' });
       const b = det.createEl('button', { text: 'Probar' }); const res = det.createDiv('orb-bv-estado');
       b.onclick = async () => { IA.clave = i.value.trim(); this.plugin.ajustes.iaClave = IA.clave; await this.plugin.guardar(); res.setText('Probando…'); res.className = 'orb-bv-estado';
-        try { const r = await llamarAPI('Responde solo: listo', 'Hola', 20); res.setText('✓ Funciona (' + (r || 'ok').slice(0, 30) + ')'); res.addClass('ok'); } catch (e) { res.setText('No va: ' + e.message); res.addClass('no'); } };
+        try { const r = await llamarAPI('Responde solo: listo', 'Hola', 20); res.setText('✓ Funciona (' + (r || 'ok').slice(0, 30) + ')'); res.addClass('ok'); } catch (e) { res.setText(motivoError(e)); res.addClass('no'); } };
     }
   }
   async terminar() {
