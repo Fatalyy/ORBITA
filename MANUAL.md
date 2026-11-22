@@ -62,18 +62,18 @@ Modelo por defecto: el más barato y rápido de cada marca. Puedes cambiarlo en 
 ### C) Sin IA
 Todo funciona (nota del día, avisos del equipo, metas, calendario) menos las respuestas del chat.
 
-## 4. Tu proyecto ÓRBITA en la app de Claude (opcional)
+## 4. Hablar con el equipo también desde la app de Claude (opcional)
 
-Para hablar con el equipo también desde la app de Claude (ordenador y móvil) y recibir avisos de buenos días y de noche, como un chat más. Todo lo necesario está en la carpeta oculta `.claude-proyecto` de tu bóveda (la última pantalla de la Bienvenida tiene botones para copiar y abrirla):
+**Ya viene configurado.** Tu bóveda trae las instrucciones del equipo (`CLAUDE.md`) y el método de cada agente (`.claude/skills/`). Claude Code los lee solo, así que el chat de Obsidian ya los usa.
 
+**Desde la app de Claude en el ordenador (lo más fácil):** abre la pestaña **Code**, elige la carpeta `Documentos/ORBITA` y escribe, por ejemplo, «Director, ¿qué toca hoy?». Ya sabe quién es cada agente y lee tus notas. No hay que crear nada.
+
+**Si además quieres un Proyecto en claude.ai** (para el móvil y los avisos de buenos días y de noche), se hace a mano una vez, en 2 minutos. Claude no deja que un programa lo cree por ti. Todo está en la carpeta oculta `.claude-proyecto` de tu bóveda; la última pantalla de la Bienvenida tiene botones para copiar y abrirla:
 1. App de Claude → **Proyectos → Nuevo proyecto** → «ÓRBITA».
 2. **Instrucciones:** pega `INSTRUCCIONES_PROYECTO.txt`.
 3. **Conocimiento:** sube `CONSTITUCION.md` y `BUZON.md`.
-4. **Skills:** Ajustes → Skills → sube los 7 zip de `skills-zip/` (un método por agente).
-5. **Tus notas:** en la app de escritorio, conecta la carpeta `Documentos/ORBITA`.
-6. **Avisos al móvil:** crea dos tareas programadas en el proyecto con los textos de `rutinas/`.
-
-El proyecto no se puede crear solo desde Obsidian (Claude no lo permite desde fuera), pero son 2 minutos de copiar y pegar. Obsidian y la app comparten la misma memoria: tus notas.
+4. **Skills:** Ajustes → Skills → sube los 7 zip de `skills-zip/`.
+5. **Avisos al móvil:** crea dos tareas programadas con los textos de `rutinas/`.
 
 ## 5. El día a día
 
@@ -121,4 +121,8 @@ O, más fácil: díselo al Director en el chat.
 
 ## 9. Actualizar ÓRBITA
 
-Descarga el zip nuevo y copia solo la carpeta `vault/.obsidian/plugins/orbita` encima de la tuya (`Documentos/ORBITA/.obsidian/plugins/orbita`). Tus notas no se tocan. ÓRBITA se recarga solo en 30 segundos.
+**Es automático.** Cada vez que abres Obsidian (y cada 6 horas), ÓRBITA mira si hay una versión nueva en GitHub. Si la hay, se descarga sola, te avisa y se recarga en unos segundos. Solo cambia el programa: **tus notas no se tocan nunca**.
+
+- Para comprobarlo a mano: *Ajustes › ÓRBITA › Actualizaciones automáticas › Buscar ahora*.
+- Para desactivarlo: el mismo interruptor.
+- En el móvil, la actualización llega con la sincronización desde el ordenador.

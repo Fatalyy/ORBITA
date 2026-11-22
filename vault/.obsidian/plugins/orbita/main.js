@@ -40,7 +40,7 @@ let NOMBRE = 'Tú'; // se cambia en la Bienvenida o en Ajustes › ÓRBITA › T
 const V = { fenix: 'orbita-fenix', inicio: 'orbita-inicio', casas: 'orbita-casas', hoy: 'orbita-hoy', semana: 'orbita-semana', orbitas: 'orbita-orbitas', progreso: 'orbita-progreso', mapa: 'orbita-mapa', equipo: 'orbita-equipo', estudio: 'orbita-estudio', estudioEquipo: 'orbita-estudio-equipo', voz: 'orbita-voz', gimnasio: 'orbita-gimnasio', calma: 'orbita-calma' };
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const DIAS_CORTOS = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
-const AJUSTES_BASE = { nombre: '', sonido: true, modoApp: true, intro: true, introSiempre: false, ultimaIntro: '', blancoNegro: true, mapaInclinacion: 64, tema: 'crema', bloqueo: false, clave: null, ia: 'claude-code', iaClave: '', iaModelo: '', bienvenida: false, entrevista: false };
+const AJUSTES_BASE = { nombre: '', sonido: true, modoApp: true, intro: true, introSiempre: false, ultimaIntro: '', blancoNegro: true, mapaInclinacion: 64, tema: 'crema', bloqueo: false, clave: null, ia: 'claude-code', iaClave: '', iaModelo: '', bienvenida: false, entrevista: false, autoActualizar: true };
 
 /* ---------- Utilidades ---------- */
 const p2 = (n) => String(n).padStart(2, '0');
@@ -2649,10 +2649,26 @@ async function proximaCita(app, nombre) {
 // Respuesta en directo (solo PC): usa Claude Code instalado en el ordenador, con tu cuenta, y solo puede leer notas
 function claudeBin() {
   if (ob.Platform.isMobile) return null;
-  try { const fs = require('fs'); const path = require('path'); const casa = process.env.USERPROFILE || process.env.HOME || '';
-    const c = [path.join(casa, '.local', 'bin', process.platform === 'win32' ? 'claude.exe' : 'claude'), path.join(casa, 'AppData', 'Roaming', 'npm', 'claude.cmd')];
-    for (const x of c) if (fs.existsSync(x)) return x; } catch (e) { /* */ }
+  try {
+    const fs = require('fs'); const path = require('path'); const casa = process.env.USERPROFILE || process.env.HOME || ''; const win = process.platform === 'win32';
+    const c = [path.join(casa, '.local', 'bin', win ? 'claude.exe' : 'claude'), path.join(casa, '.claude', 'local', win ? 'claude.exe' : 'claude'),
+      path.join(process.env.APPDATA || path.join(casa, 'AppData', 'Roaming'), 'npm', 'claude.cmd'), path.join(process.env.LOCALAPPDATA || path.join(casa, 'AppData', 'Local'), 'Programs', 'claude', 'claude.exe'),
+      '/opt/homebrew/bin/claude', '/usr/local/bin/claude', path.join(casa, '.npm-global', 'bin', 'claude')];
+    // y cualquier carpeta del PATH del sistema
+    (process.env.PATH || '').split(path.delimiter).forEach((d) => { if (d) (win ? ['claude.exe', 'claude.cmd'] : ['claude']).forEach((n) => c.push(path.join(d, n))); });
+    for (const x of c) if (x && fs.existsSync(x)) return x;
+  } catch (e) { /* */ }
   return null;
+}
+// Explica en cristiano por qué no ha contestado y cómo arreglarlo
+function motivoError(e) {
+  const t = String((e && e.message) || e || '');
+  if (/login|log in|api key|authenticat|unauthori|401|credential|not logged/i.test(t)) return 'Claude Code no tiene la sesión iniciada. Abre PowerShell (o Terminal), escribe claude, pulsa Enter e inicia sesión con tu cuenta de Claude. Luego vuelve a escribirme.';
+  if (/ENOENT|EINVAL|no está instalado|not recognized/i.test(t)) return 'No encuentro Claude Code en este ordenador. Instálalo desde la Bienvenida (Ajustes › ÓRBITA › Bienvenida) y pulsa «Comprobar».';
+  if (/demasiado|timeout/i.test(t)) return 'Ha tardado demasiado. Vuelve a intentarlo en un momento.';
+  if (/credit|saldo|billing|429|quota|insufficient/i.test(t)) return 'Tu clave de API no tiene saldo o has llegado al límite. Revisa la web de tu proveedor.';
+  if (/usage limit|limit reached|rate/i.test(t)) return 'Has llegado al límite de uso de tu plan de Claude por ahora. Prueba más tarde.';
+  return 'No he podido contestar: ' + t.slice(0, 160);
 }
 function respuestaEnVivo(app, agente, previos, texto, ctx) {
   ctx = ctx || { grupo: 'del equipo ÓRBITA', pantalla: 'Equipo', ficha: 'ORBITA/6_EQUIPO/', area: 'la nota de tu área', adj: RAIZ + '/6_EQUIPO/adjuntos' };
@@ -2668,11 +2684,12 @@ function respuestaEnVivo(app, agente, previos, texto, ctx) {
     'Contesta SOLO con tu respuesta, en español de España, de 1 a 4 frases, como un amigo franco por WhatsApp (tono de TRATO.md): si algo está mal o es una excusa, díselo claro y dile qué toca hacer; si está bien, celébralo. Con ánimo bajo, cercano y sin exigir. Sin firmar, sin títulos, sin listas ni markdown.'].filter(Boolean).join('\n\n');
   return new Promise((ok, mal) => {
     let out = '', err = '';
-    const p = spawn(bin, ['-p', '--model', 'sonnet', '--max-turns', '8', '--allowedTools', 'Read,Glob,Grep,LS,WebFetch,WebSearch,Write,Edit', '--output-format', 'text'], { cwd, windowsHide: true, env: Object.assign({}, process.env) });
+    const esCmd = /\.(cmd|bat)$/i.test(bin);
+    const p = spawn(esCmd ? '"' + bin + '"' : bin, ['-p', '--model', 'sonnet', '--max-turns', '8', '--allowedTools', 'Read,Glob,Grep,LS,WebFetch,WebSearch,Write,Edit', '--output-format', 'text'], { cwd, windowsHide: true, shell: esCmd, env: Object.assign({}, process.env) });
     const t = setTimeout(() => { try { p.kill(); } catch (e) { /* */ } mal(new Error('Ha tardado demasiado')); }, 240000);
     p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { err += d; });
     p.on('error', (e) => { clearTimeout(t); mal(e); });
-    p.on('close', (code) => { clearTimeout(t); const r = out.trim(); if (code === 0 && r) ok(r); else mal(new Error((err || 'Sin respuesta').slice(0, 200))); });
+    p.on('close', (code) => { clearTimeout(t); const r = out.trim(); if (code === 0 && r && !/^(Invalid API key|Please run \/login)/i.test(r)) ok(r); else mal(new Error(((err || '') + ' ' + (r || '')).trim().slice(0, 300) || 'Sin respuesta')); });
     p.stdin.write(prompt); p.stdin.end();
   });
 }
@@ -2762,6 +2779,25 @@ const CTX_ENTREVISTA = { grupo: 'del equipo ÓRBITA', pantalla: 'Equipo', ficha:
 function mesNombre(d) { return ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][(d || new Date()).getMonth()]; }
 async function escribirNota(app, ruta, cont) { const f = archivo(app, ruta); if (f) await app.vault.modify(f, cont); else await app.vault.create(ruta, cont); }
 
+/* ---------- Actualizaciones automáticas desde GitHub ---------- */
+const REPO_RAW = 'https://raw.githubusercontent.com/Fatalyy/ORBITA/main/vault/.obsidian/plugins/orbita/';
+const verNum = (v) => String(v || '0').split('.').map((x) => parseInt(x, 10) || 0).reduce((a, x) => a * 1000 + x, 0);
+async function buscarActualizacion(plugin, manual) {
+  if (ob.Platform.isMobile && !manual) return; // en el móvil, solo si lo pides (lo normal es que llegue por la sincronización)
+  try {
+    const r = await ob.requestUrl({ url: REPO_RAW + 'manifest.json?t=' + Date.now(), throw: false });
+    if (r.status !== 200) { if (manual) aviso('No he podido comprobar las actualizaciones ahora.'); return; }
+    const remoto = JSON.parse(r.text); const actual = plugin.manifest.version;
+    if (verNum(remoto.version) <= verNum(actual)) { if (manual) aviso('Tienes la última versión de ÓRBITA (' + actual + ').'); return; }
+    const [js, css] = await Promise.all([ob.requestUrl({ url: REPO_RAW + 'main.js?t=' + Date.now(), throw: false }), ob.requestUrl({ url: REPO_RAW + 'styles.css?t=' + Date.now(), throw: false })]);
+    if (js.status !== 200 || css.status !== 200 || js.text.length < 100000 || !/module\.exports/.test(js.text)) { if (manual) aviso('La descarga de la actualización ha fallado. Prueba más tarde.'); return; }
+    const ad = plugin.app.vault.adapter; const dir = plugin.manifest.dir;
+    try { await ad.write(dir + '/main.js.anterior', await ad.read(dir + '/main.js')); } catch (e) { /* copia de seguridad opcional */ }
+    await ad.write(dir + '/styles.css', css.text); await ad.write(dir + '/main.js', js.text); await ad.write(dir + '/manifest.json', r.text);
+    new ob.Notice('ÓRBITA se ha actualizado a la versión ' + remoto.version + '. Se recarga sola en unos segundos.', 8000);
+  } catch (e) { console.warn('ÓRBITA actualizar', e); if (manual) aviso('No he podido actualizar: ' + e.message); }
+}
+
 class BienvenidaModal extends ob.Modal {
   constructor(app, plugin) { super(app); this.plugin = plugin; this.paso = 0; this.d = { nombre: plugin.ajustes.nombre || '', edad: '', ciudad: '', dedico: '', cuesta: '', trato: 'directo', levantar: '08:00', dormir: '23:30', gymDias: ['L', 'X', 'V'], gymHora: '18:00', ocupDias: 'L-V', ocupIni: '09:00', ocupFin: '14:00', ocupQue: 'Clase o trabajo', metas: { dinero: '', cuerpo: '', mente: '', relaciones: '', estudios: '' }, mes: ['', '', ''] }; }
   onOpen() { this.modalEl.addClass('orb-bv'); this.pintar(); }
@@ -2840,6 +2876,10 @@ class BienvenidaModal extends ob.Modal {
     if (IA.modo === 'claude-code') {
       const ok = !!claudeBin();
       det.createDiv({ cls: 'orb-bv-estado ' + (ok ? 'ok' : 'no'), text: ok ? '✓ Claude Code está instalado en este ordenador' : (ob.Platform.isMobile ? 'En el móvil no se puede: configúralo en el ordenador o usa una clave de API.' : 'Todavía no está instalado') });
+      if (ok) { const pr = det.createEl('button', { text: 'Probar que contesta' }); const res = det.createDiv('orb-bv-estado'); res.setText('Pruébalo: comprueba también que tienes la sesión iniciada.');
+        pr.onclick = async () => { res.className = 'orb-bv-estado'; res.setText('Probando… (unos segundos)');
+          try { const r = await respuestaEnVivo(this.app, 'Director', '', 'Contesta solo con la palabra: listo', { grupo: 'del equipo ÓRBITA', pantalla: 'Bienvenida', ficha: 'ORBITA/6_EQUIPO/', area: '', adj: RAIZ + '/6_EQUIPO/adjuntos' }); res.setText('✓ Funciona: «' + r.slice(0, 40) + '»'); res.addClass('ok'); }
+          catch (e) { res.setText(motivoError(e)); res.addClass('no'); } }; }
       if (!ok && !ob.Platform.isMobile) {
         const ol = det.createEl('ol');
         ol.createEl('li', { text: 'Abre «PowerShell» (Windows) o «Terminal» (Mac).' });
@@ -3146,7 +3186,7 @@ class OficinaView extends VistaBase {
     const env = caja.createEl('button', { cls: 'orb-of-enviar', attr: { 'aria-label': 'Enviar' } }); ob.setIcon(env, 'send');
     env.addEventListener('click', () => this.enviar(a, ta));
     ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !ob.Platform.isMobile) { e.preventDefault(); this.enviar(a, ta); } });
-    panel.createDiv({ cls: 'orb-of-pie', text: iaDisponible() ? 'Enter para enviar · Mayús+Enter para otra línea' : 'Te contesta a las 09:30 o a las 23:15 y te avisa al móvil' });
+    panel.createDiv({ cls: 'orb-of-pie', text: iaDisponible() ? 'Enter para enviar · Mayús+Enter para otra línea' : 'Sin IA conectada: conéctala en Ajustes › ÓRBITA para que te conteste' });
     setTimeout(() => { hilo.scrollTop = hilo.scrollHeight; }, 20);
   }
   espera(hilo, nombre) { const p = hilo.createDiv('orb-of-espera'); const i = p.createSpan(); ob.setIcon(i, 'clock'); p.createSpan({ text: nombre + ' te contesta ' + proximaRespuesta() }); return p; }
@@ -3201,8 +3241,9 @@ class OficinaView extends VistaBase {
     } catch (e) {
       if (pts) pts.remove();
       const hiloAct = this.sel === k ? this.hiloEl : null;
-      if (hiloAct && hiloAct.isConnected) { const p = this.espera(hiloAct, a.nombre); p.addClass('error'); hiloAct.scrollTop = hiloAct.scrollHeight; }
-      new ob.Notice('No he podido contestarte ahora (' + (e && e.message ? e.message : 'error') + '). Te contesto a las 23:15.');
+      const motivo = motivoError(e); console.warn('ÓRBITA chat', e);
+      if (hiloAct && hiloAct.isConnected) { const p = hiloAct.createDiv('orb-of-espera error'); const ic = p.createSpan(); ob.setIcon(ic, 'alert-circle'); p.createSpan({ text: motivo }); hiloAct.scrollTop = hiloAct.scrollHeight; }
+      new ob.Notice(motivo, 9000);
     } finally { this.escribiendo[k] = false; this.refrescarMesa(k); }
   }
 }
@@ -3211,8 +3252,8 @@ class OficinaView extends VistaBase {
 /* Configuración de cada «oficina»: el Equipo y el Estudio de contenido (chats separados) */
 const CONF_EQUIPO = { tipo: V.casas, nombre: 'Equipo', icono: 'users', sub: 'Tu equipo', titulo: 'La oficina', chat: RAIZ + '/6_EQUIPO/CHAT.md', jefe: 'director', mapa: OFICINA, visto: 'chatVisto', carpeta: '6_EQUIPO',
   lista: (app) => agentes(app),
-  ayudaPC: 'Toca una mesa y escríbele: en el PC te contesta al momento; desde el móvil, a las 09:30 o a las 23:15. Si no sabes a quién, escribe al Director.',
-  ayudaMovil: 'Toca una mesa y escríbele: te contesta a las 09:30 o a las 23:15. Si no sabes a quién, escribe al Director.',
+  ayudaPC: 'Toca una mesa y escríbele: te contesta al momento. Si no sabes a quién, escribe al Director.',
+  ayudaMovil: 'Toca una mesa y escríbele. Para que conteste al momento, conecta tu IA en Ajustes › ÓRBITA. Si no sabes a quién, escribe al Director.',
   cabecera: '# CHAT DEL EQUIPO\n*Escribe desde Obsidian (pantalla Equipo). Cada agente contesta debajo.*\n', ctx: null, adj: RAIZ + '/6_EQUIPO/adjuntos' };
 const ESTUDIO_MAPA = {
   estratega: { color: PALETA.dinero, puesto: 'Dirección del estudio', icono: 'clapperboard' },
@@ -3867,6 +3908,9 @@ class Ajustes extends ob.PluginSettingTab {
     c.createEl('h2', { text: 'ÓRBITA' });
     new ob.Setting(c).setName('Tu nombre').setDesc('Cómo te llama el equipo.').addText((tx) => tx.setValue(this.plugin.ajustes.nombre || '').onChange(async (v) => { this.plugin.ajustes.nombre = v.trim(); NOMBRE = v.trim() || 'Tú'; await this.plugin.guardar(); }));
     new ob.Setting(c).setName('Bienvenida').setDesc('Vuelve a pasar el asistente de inicio (nombre, IA, horario y metas).').addButton((b) => b.setButtonText('Abrir').onClick(() => new BienvenidaModal(this.app, this.plugin).open()));
+    new ob.Setting(c).setName('Actualizaciones automáticas').setDesc('ÓRBITA se actualiza solo cuando hay una versión nueva (solo el programa; tus notas no se tocan). Versión actual: ' + this.plugin.manifest.version)
+      .addToggle((t) => t.setValue(this.plugin.ajustes.autoActualizar !== false).onChange(async (v) => { this.plugin.ajustes.autoActualizar = v; await this.plugin.guardar(); }))
+      .addButton((b) => b.setButtonText('Buscar ahora').onClick(() => buscarActualizacion(this.plugin, true)));
     c.createEl('h3', { text: 'Inteligencia artificial' });
     new ob.Setting(c).setName('Con qué contesta el equipo').setDesc('Claude con tu cuenta (Claude Code, solo ordenador) o una clave de API (ordenador y móvil).').addDropdown((dd) => dd.addOptions({ 'claude-code': 'Claude con tu cuenta (Claude Code)', anthropic: 'Clave de API de Anthropic', openai: 'Clave de API de OpenAI', ninguna: 'Sin IA' }).setValue(IA.modo).onChange(async (v) => { IA.modo = v; this.plugin.ajustes.ia = v; await this.plugin.guardar(); this.display(); }));
     if (IA.modo === 'anthropic' || IA.modo === 'openai') {
@@ -3922,6 +3966,7 @@ module.exports = class OrbitaPlugin extends ob.Plugin {
     this.addRibbonIcon('users', 'Equipo', () => this.abrir(V.casas));
     const cmd = (id, name, fn, tecla) => this.addCommand(Object.assign({ id, name, callback: fn }, tecla ? { hotkeys: [{ modifiers: ['Alt'], key: tecla }] } : {}));
     cmd('bienvenida', 'Bienvenida: configurar ÓRBITA', () => new BienvenidaModal(this.app, this).open());
+    cmd('actualizar', 'Buscar actualizaciones de ÓRBITA', () => buscarActualizacion(this, true));
     cmd('abrir-inicio', 'Abrir Inicio', () => this.abrir(V.inicio), '0');
     cmd('abrir-hoy', 'Abrir Hoy', () => this.abrir(V.hoy), '1');
     cmd('abrir-casas', 'Abrir el equipo', () => this.abrir(V.casas), '6');
@@ -3970,6 +4015,8 @@ module.exports = class OrbitaPlugin extends ob.Plugin {
       window.setTimeout(() => archivarChat(this.app).catch((e) => console.error('ÓRBITA archivar chat', e)), 20000);
       window.setTimeout(vida, 8000); this.registerInterval(window.setInterval(vida, 60 * 1000));
       try { vigilarVideos(this); } catch (e) { console.error('vigilarVideos', e); }
+      const actualizar = () => { if (this.ajustes.autoActualizar !== false) buscarActualizacion(this, false); };
+      window.setTimeout(actualizar, 45000); this.registerInterval(window.setInterval(actualizar, 6 * 3600 * 1000));
       this.registerEvent(this.app.vault.on('modify', (f) => { if (f && f.path === RAIZ + '/6_EQUIPO/CHAT.md') { clearTimeout(this._tAv); this._tAv = setTimeout(this.avisarChat, 1500); } }));
       this.limpiarPestanasAntiguas();
       this.barraEstado();
