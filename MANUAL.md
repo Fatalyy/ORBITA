@@ -62,7 +62,20 @@ Modelo por defecto: el más barato y rápido de cada marca. Puedes cambiarlo en 
 ### C) Sin IA
 Todo funciona (nota del día, avisos del equipo, metas, calendario) menos las respuestas del chat.
 
-## 4. El día a día
+## 4. Tu proyecto ÓRBITA en la app de Claude (opcional)
+
+Para hablar con el equipo también desde la app de Claude (ordenador y móvil) y recibir avisos de buenos días y de noche, como un chat más. Todo lo necesario está en la carpeta oculta `.claude-proyecto` de tu bóveda (la última pantalla de la Bienvenida tiene botones para copiar y abrirla):
+
+1. App de Claude → **Proyectos → Nuevo proyecto** → «ÓRBITA».
+2. **Instrucciones:** pega `INSTRUCCIONES_PROYECTO.txt`.
+3. **Conocimiento:** sube `CONSTITUCION.md` y `BUZON.md`.
+4. **Skills:** Ajustes → Skills → sube los 7 zip de `skills-zip/` (un método por agente).
+5. **Tus notas:** en la app de escritorio, conecta la carpeta `Documentos/ORBITA`.
+6. **Avisos al móvil:** crea dos tareas programadas en el proyecto con los textos de `rutinas/`.
+
+El proyecto no se puede crear solo desde Obsidian (Claude no lo permite desde fuera), pero son 2 minutos de copiar y pegar. Obsidian y la app comparten la misma memoria: tus notas.
+
+## 5. El día a día
 
 - **Hoy:** marca lo que haces. La rana va primero.
 - **Cerrar el día (2 min):** pantalla Hoy → *Cerrar el día*.
@@ -81,13 +94,13 @@ Todo funciona (nota del día, avisos del equipo, metas, calendario) menos las re
 
 El equipo te escribe solo si algo está sin marcar (levantarte, entreno, rana, formación, cierre…) y solo con Obsidian abierto. Esos avisos no gastan IA.
 
-## 5. Móvil y sincronización
+## 6. Móvil y sincronización
 
 - **Obsidian Sync** (de pago, lo más fácil), o
 - **Remotely Save** (gratis) con Dropbox, OneDrive o similar: en sus ajustes, «sincronizar cada 1 minuto» y «al guardar».
 - En el móvil, el chat contesta al momento solo con clave de API. Con Claude Code, te contesta cuando abras el ordenador.
 
-## 6. Personalizar
+## 7. Personalizar
 
 Todo son notas normales en `ORBITA/`:
 - Horario: `0_NUCLEO/CALENDARIO.md` · Citas: `CITAS.md` · Metas: `METAS.md` · Perfil: `PERFIL.md`
@@ -98,7 +111,7 @@ Todo son notas normales en `ORBITA/`:
 
 O, más fácil: díselo al Director en el chat.
 
-## 7. Problemas frecuentes
+## 8. Problemas frecuentes
 
 - **No sale la Bienvenida:** *Ajustes › ÓRBITA › Bienvenida › Abrir*, o paleta de comandos (Ctrl/Cmd+P) → «Bienvenida».
 - **No veo ÓRBITA:** *Ajustes → Plugins de la comunidad*: desactiva el modo restringido y enciende ÓRBITA.
@@ -106,6 +119,6 @@ O, más fácil: díselo al Director en el chat.
 - **Error 401:** la clave está mal copiada. **Error 429 o «credit»:** falta saldo en la web de la API.
 - **No aparece la nota de hoy:** espera 1 minuto o pulsa «Crearla» en Hoy.
 
-## 8. Actualizar ÓRBITA
+## 9. Actualizar ÓRBITA
 
 Descarga el zip nuevo y copia solo la carpeta `vault/.obsidian/plugins/orbita` encima de la tuya (`Documentos/ORBITA/.obsidian/plugins/orbita`). Tus notas no se tocan. ÓRBITA se recarga solo en 30 segundos.

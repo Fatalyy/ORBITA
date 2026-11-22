@@ -12,6 +12,10 @@ Nota del día preparada, metas por meses, calendario, gimnasio, cuidado personal
 
 ¿Algo no va? Mira el [MANUAL](MANUAL.md): todo explicado paso a paso.
 
+## Igual en la app de Claude
+
+Opcional: crea tu proyecto **ÓRBITA** en la app de Claude con las instrucciones, la constitución y las skills de los agentes que vienen en `vault/.claude-proyecto`. Así hablas con el mismo equipo desde la app y el móvil, y recibes avisos de buenos días y de noche. Pasos en el [MANUAL](MANUAL.md#4-tu-proyecto-órbita-en-la-app-de-claude-opcional).
+
 ## Qué IA puedo usar
 
 | Opción | Cuesta | Dónde funciona |

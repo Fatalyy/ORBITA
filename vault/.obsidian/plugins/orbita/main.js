@@ -2309,6 +2309,12 @@ class BienvenidaModal extends ob.Modal {
     } else {
       cuerpo.createEl('h2', { text: 'Todo listo, ' + (d.nombre || 'crack') });
       const ul = cuerpo.createEl('ul'); ['Tu perfil, tus metas y tu horario se guardan en tus notas.', iaDisponible() ? 'Ahora el Director te escribe en el chat para terminar de configurarlo.' : 'Sin IA conectada, el equipo funciona igual (avisos, nota del día). Puedes conectarla luego en Ajustes › ÓRBITA.', 'Mañana tendrás tu nota del día preparada.'].forEach((t) => ul.createEl('li', { text: t }));
+      const px = cuerpo.createDiv('orb-bv-det'); px.createEl('h3', { text: 'Opcional: tu proyecto ÓRBITA en la app de Claude' });
+      px.createDiv({ cls: 'orb-bv-sub', text: 'Para hablar con el equipo también desde la app de Claude (y el móvil) y recibir avisos de buenos días y de noche. Son 2 minutos.' });
+      const ol = px.createEl('ol'); ['En la app de Claude: Proyectos → Nuevo proyecto → «ÓRBITA».', 'Pega las instrucciones (botón de abajo).', 'Sube CONSTITUCION.md y BUZON.md al conocimiento del proyecto, y los 7 zip de skills-zip en Ajustes → Skills.', 'En la app de escritorio, conecta la carpeta de tu bóveda.'].forEach((t) => ol.createEl('li', { text: t }));
+      const bx = px.createDiv('orb-bv-chips');
+      const b1 = bx.createEl('button', { text: 'Copiar instrucciones' }); b1.onclick = async () => { const t = await this.app.vault.adapter.read('.claude-proyecto/INSTRUCCIONES_PROYECTO.txt').catch(() => ''); if (t) { navigator.clipboard.writeText(t); aviso('Instrucciones copiadas. Pégalas en tu proyecto.'); } else aviso('No encuentro .claude-proyecto en tu bóveda.'); };
+      if (!ob.Platform.isMobile) { const b2 = bx.createEl('button', { text: 'Abrir la carpeta con los archivos' }); b2.onclick = () => { try { require('electron').shell.openPath(require('path').join(this.app.vault.adapter.getBasePath(), '.claude-proyecto')); } catch (e) { aviso('Ábrela a mano: carpeta .claude-proyecto de tu bóveda'); } }; }
     }
     const pie = c.createDiv('orb-bv-pie');
     if (this.paso > 0) { const a = pie.createEl('button', { text: 'Atrás' }); a.onclick = () => { this.paso--; this.pintar(); }; }
