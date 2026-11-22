@@ -44,13 +44,13 @@ echo [3/3] Abriendo Obsidian...
 taskkill /IM Obsidian.exe /F >nul 2>nul
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$f = Join-Path $env:APPDATA 'obsidian\obsidian.json'; $p = Join-Path $env:USERPROFILE 'Documents\ORBITA';" ^
-  "New-Item -ItemType Directory -Force (Split-Path $f) | Out-Null;" ^
+  "New-Item -ItemType Directory -Force (Split-Path $f) | Out-Null; if (Test-Path $f) { Copy-Item -Force $f ($f + '.bak') };" ^
   "$j = if (Test-Path $f) { Get-Content $f -Raw | ConvertFrom-Json } else { [pscustomobject]@{ vaults = [pscustomobject]@{} } };" ^
   "if (-not $j.vaults) { $j | Add-Member -Force vaults ([pscustomobject]@{}) };" ^
   "foreach ($v in $j.vaults.PSObject.Properties) { $v.Value | Add-Member -Force open $false };" ^
   "$ya = $j.vaults.PSObject.Properties | Where-Object { $_.Value.path -eq $p };" ^
   "if ($ya) { $ya.Value | Add-Member -Force open $true } else { $id = -join ((48..57)+(97..102) | Get-Random -Count 16 | ForEach-Object {[char]$_}); $j.vaults | Add-Member -Force $id ([pscustomobject]@{ path = $p; ts = [DateTimeOffset]::Now.ToUnixTimeMilliseconds(); open = $true }) };" ^
-  "$j | ConvertTo-Json -Depth 10 | Set-Content -Encoding UTF8 $f"
+  "[IO.File]::WriteAllText($f, ($j | ConvertTo-Json -Depth 10), (New-Object Text.UTF8Encoding $false))"
 start "" "%OBS%"
 
 echo.
