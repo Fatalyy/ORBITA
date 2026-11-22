@@ -7,7 +7,7 @@
 - **Entrevista del Director:** al terminar, el Director te pregunta en el chat y termina de configurar tus notas.
 - **Elige tu IA:** Claude con tu cuenta (Claude Code), clave de API de Anthropic o de OpenAI (también en el móvil), o sin IA.
 - **Instaladores** de un clic para Windows y Mac.
-- **Estudio de contenido** (Más → Contenido) con su propio chat y calendario semanal.
+- Menú lateral ordenado por grupos (tu día · equipo · cuerpo y mente · sistema). El Estudio de contenido sale del menú.
 - Fotos, archivos y enlaces en los chats.
 - Manual nuevo, más corto y paso a paso.
 

@@ -32,7 +32,7 @@ Se elige en la Bienvenida y se cambia cuando quieras en *Ajustes › ÓRBITA*.
 - **Hoy:** tu nota del día con la rana (lo más importante), rutinas, entreno y cuidado personal según el día.
 - **Equipo:** una oficina con un chat por agente. Te escriben durante el día si algo sigue sin hacer.
 - **Metas:** plan del año en 5 órbitas (dinero, cuerpo, mente, relaciones y estudios) y metas del mes con seguimiento semanal.
-- **Calendario, Progreso, Gimnasio, Formación, Voz, Contenido** y más.
+- **Calendario, Progreso, Gimnasio, Formación, Voz y Calma**, en un menú ordenado por grupos.
 - Puedes mandar **fotos, archivos y enlaces** en el chat.
 
 ## Privacidad

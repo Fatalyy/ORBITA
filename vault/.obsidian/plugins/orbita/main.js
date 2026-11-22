@@ -806,7 +806,7 @@ class MasSheet extends ob.Modal {
       items.forEach(([n, ic, col, fn]) => { const b = g.createEl('button', { cls: 'orb-sheet-it' }); b.style.setProperty('--c', col); const i = b.createDiv('orb-sheet-ic'); ob.setIcon(i, ic); b.createDiv({ cls: 'orb-sheet-n', text: n }); b.addEventListener('click', fn); }); };
     grupo('Tu día', [['Progreso', 'activity', PALETA.cuerpo, () => ir(V.progreso)], ['Cerrar el día', 'moon', PALETA.noche, () => { this.close(); cerrarDia(this.app); }], ['Semana', 'calendar-check', PALETA.noche, () => { this.close(); revisarSemana(this.app); }]]);
     grupo('Cuerpo y mente', [['Calma', 'wind', PALETA.calma, () => ir(V.calma)], ['Voz', 'mic', PALETA.relaciones, () => ir(V.voz)], ['Formación', 'flame', PALETA.relaciones, () => ir(V.fenix)]]);
-    grupo('Proyectos', [['Estudio', 'clapperboard', PALETA.dinero, () => ir(V.estudio)], ['Contenido', 'sparkles', PALETA.dinero, () => ir(V.estudioEquipo)], ['Órbitas', 'target', PALETA.estudios, () => ir(V.orbitas)], ['Cerebro', 'brain', PALETA.mente, () => ir(V.mapa)], ['Equipo', 'users', PALETA.mente, () => ir(V.casas)], ['Guía', 'help-circle', '#c9c9c9', () => { this.close(); this.app.workspace.openLinkText(NOTAS.guia, '', false); }]]);
+    grupo('Proyectos', [['Órbitas', 'target', PALETA.estudios, () => ir(V.orbitas)], ['Cerebro', 'brain', PALETA.mente, () => ir(V.mapa)], ['Equipo', 'users', PALETA.mente, () => ir(V.casas)], ['Guía', 'help-circle', '#c9c9c9', () => { this.close(); this.app.workspace.openLinkText(NOTAS.guia, '', false); }]]);
     const pie = c.createDiv('orb-sheet-pie');
     const tema = pie.createEl('button', { cls: 'orb-sheet-btn', text: this.plugin.ajustes.tema === 'oscuro' ? 'Tema claro' : 'Tema oscuro' }); tema.addEventListener('click', async () => { await this.plugin.alternarTema(); this.close(); });
     const notas = pie.createEl('button', { cls: 'orb-sheet-btn', text: 'Mis notas' }); notas.addEventListener('click', () => { this.close(); try { this.app.commands.executeCommandById('file-explorer:open'); } catch (e) { /* */ } });
@@ -1929,12 +1929,9 @@ class InicioView extends VistaBase {
       ['Formación', 'flame', fx ? 'Módulo ' + fx.actual + ' de ' + fx.total + (fx.titulo ? ' · ' + fx.titulo : '') : 'Tu curso o formación', () => this.plugin.abrir(V.fenix), 'ancho'],
       ['Mente', 'brain', 'Sueño, calma y apoyo', () => this.app.workspace.openLinkText(CARPETAS.mente + '/MENTE.md', '', false)],
       ['Relaciones', 'heart-handshake', 'Amigos, familia y pareja', () => this.app.workspace.openLinkText(CARPETAS.relaciones + '/RELACIONES.md', '', false)],
-      ['Estudios', 'graduation-cap', 'DAM y carnet', () => this.app.workspace.openLinkText(CARPETAS.estudios + '/ESTUDIOS.md', '', false)],
+      ['Estudios', 'graduation-cap', 'Tus estudios y cursos', () => this.app.workspace.openLinkText(CARPETAS.estudios + '/ESTUDIOS.md', '', false)],
       ['Imagen', 'scan-face', 'Pelo, barba, piel y físico', () => this.app.workspace.openLinkText(CARPETAS.cuerpo + '/IMAGEN.md', '', false)],
       ['Dinero', 'wallet', (din ? Math.round(o.euros * 100) / 100 : 0) + ' € este mes', () => this.app.workspace.openLinkText(CARPETAS.dinero + '/PLAN_DINERO.md', '', false)],
-      ['Estudio', 'clapperboard', 'TikTok e Instagram · tus vídeos', () => this.plugin.abrir(V.estudio)],
-      ['Equipo de contenido', 'sparkles', 'Guionista, Editor y Crecimiento', () => this.plugin.abrir(V.estudioEquipo)],
-      ['Ideas', 'lightbulb', 'Banco de vídeos', () => this.app.workspace.openLinkText(NOTAS.ideas, '', false)],
       ['Órbitas', 'target', 'Plan maestro · 5 órbitas', () => this.plugin.abrir(V.orbitas)],
       ['Cerebro', 'brain', nNotas + ' notas · tu mapa vivo', () => this.plugin.abrir(V.mapa)],
       ['Equipo', 'users', eq.length + ' agentes · ' + trabajando + ' trabajando', () => this.plugin.abrir(V.casas)],
@@ -3554,11 +3551,14 @@ module.exports = class OrbitaPlugin extends ob.Plugin {
     });
     const mas = dock.createEl('button', { cls: 'orb-dock-mas', attr: { 'aria-label': 'Cerrar el día' } }); ob.setIcon(mas, 'moon'); mas.addEventListener('click', () => cerrarDia(this.app));
     // Hablar con el equipo en directo (Claudian, solo en el PC)
-    if (!ob.Platform.isMobile) { const ch = dock.createEl('button', { cls: 'orb-dock-mas', attr: { 'aria-label': 'Hablar con el equipo (Claude)' } }); ob.setIcon(ch, 'message-circle'); ch.addEventListener('click', () => abrirClaudian(this.app)); }
+    if (!ob.Platform.isMobile && this.app.plugins && this.app.plugins.enabledPlugins && this.app.plugins.enabledPlugins.has('realclaudian')) { const ch = dock.createEl('button', { cls: 'orb-dock-mas', attr: { 'aria-label': 'Hablar con el equipo (Claude)' } }); ob.setIcon(ch, 'message-circle'); ch.addEventListener('click', () => abrirClaudian(this.app)); }
     const rail = host.createDiv('orb-rail oculto'); const rind = rail.createDiv('orb-rail-ind'); const rbtns = {};
-    [['Hablar con el equipo (Claude)', 'cmd:claudian', 'message-circle'], null, ['Hoy', V.hoy, 'sun'], ['Calendario', V.semana, 'calendar-days'], ['Órbitas', V.orbitas, 'target'], ['Equipo', V.casas, 'users'], ['Progreso', V.progreso, 'activity'], null,
-      ['Gimnasio', V.gimnasio, 'dumbbell'], ['Calma', V.calma, 'wind'], ['Voz', V.voz, 'mic'], ['Formación', V.fenix, 'flame'], null,
-      ['Estudio', V.estudio, 'clapperboard'], ['Equipo de contenido', V.estudioEquipo, 'sparkles'], ['Inicio', V.inicio, 'layout-grid'], ['Cerebro', V.mapa, 'brain'], null, ['Guía', NOTAS.guia, 'help-circle']].forEach((it) => {
+    const conClaudian = this.app.plugins && this.app.plugins.enabledPlugins && this.app.plugins.enabledPlugins.has('realclaudian');
+    // Menú lateral por grupos: tu día · tu equipo · cuerpo y mente · sistema
+    [['Inicio', V.inicio, 'layout-grid'], ['Hoy', V.hoy, 'sun'], ['Calendario', V.semana, 'calendar-days'], ['Órbitas', V.orbitas, 'target'], ['Progreso', V.progreso, 'activity'], null,
+      ['Equipo', V.casas, 'users']].concat(conClaudian ? [['Hablar con el equipo (Claude)', 'cmd:claudian', 'message-circle']] : []).concat([null,
+      ['Gimnasio', V.gimnasio, 'dumbbell'], ['Formación', V.fenix, 'flame'], ['Voz', V.voz, 'mic'], ['Calma', V.calma, 'wind'], null,
+      ['Cerebro', V.mapa, 'brain'], ['Guía', NOTAS.guia, 'help-circle']]).forEach((it) => {
       if (!it) { rail.createDiv('orb-rail-sep'); return; }
       const [n, v, ic] = it; const b = rail.createEl('button', { cls: 'orb-rail-btn', attr: { 'data-tip': n } }); ob.setIcon(b, ic); rbtns[v] = b;
       b.addEventListener('click', () => { if (v === 'cmd:claudian') { abrirClaudian(this.app); return; } if (String(v).endsWith('.md')) { if (SON) SON.clic(); this.app.workspace.openLinkText(v, '', 'tab'); } else this.irA(v); });
